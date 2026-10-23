@@ -12,6 +12,7 @@ class CompareView {
         this.texts = null;
         this.result = null;
         this.current = -1;
+        this.showAll = false;   // true after Show all: no folded runs
 
         CompareView.IGNORE_CHOICES.forEach(([key, label, hint]) => {
             const btn = document.createElement('button');
@@ -43,6 +44,20 @@ class CompareView {
             const text = e.target.closest('.text[data-side]');
             if (text && this.onLine) this.onLine(text.dataset.side, Number(text.dataset.line));
         });
+        // A folded run opens on its own, or Show all opens every one until the next new comparison
+        els.rows.addEventListener('click', (e) => {
+            const btn = e.target.closest('.fold button');
+            if (!btn) return;
+            if (btn.dataset.unfold === 'all') {
+                this.showAll = true;
+                this.compare(...this.texts, { keepPlace: true });
+                return;
+            }
+            const fold = btn.closest('.fold');
+            for (let i = Number(fold.dataset.start); i < Number(fold.dataset.end); i++) this.rowEl(i).classList.remove('folded');
+            fold.remove();
+            this.drawRuler();
+        });
         this.clear('');
     }
 
@@ -50,6 +65,7 @@ class CompareView {
     // otherwise start at the first difference.
     compare(leftText, rightText, { keepPlace = false } = {}) {
         const scrollTop = this.els.scroller.scrollTop;
+        if (!keepPlace) this.showAll = false;
         this.texts = [leftText, rightText];
         this.result = compareTexts(leftText, rightText, this.options);
         this.current = -1;
@@ -82,12 +98,23 @@ class CompareView {
                 : CompareView.escape(result[side][index]);
             return `<div class="num ${kind}">${index + 1}</div><div class="text ${kind}" data-side="${side}" data-line="${index}">${text}</div>`;
         };
+        // Long runs of matching lines fold into one row that opens with a click
+        const folds = this.showAll ? [] : foldRanges(result.rows);
+        let nextFold = 0;
         this.els.rows.innerHTML = result.rows.map((row, i) => {
+            const fold = folds[nextFold];
+            const folded = fold && i >= fold.start && i < fold.end;
+            const foldRow = fold && i === fold.start
+                ? `<div class="fold" data-start="${fold.start}" data-end="${fold.end}">`
+                    + `<button type="button" data-unfold="one"><i class="fa-solid fa-angles-down"></i> ${fold.end - fold.start} matching lines</button>`
+                    + '<button type="button" data-unfold="all">Show all</button></div>'
+                : '';
+            if (fold && i === fold.end - 1) nextFold++;
             const [leftKind, rightKind] = CompareView.KINDS[row.type];
             // A blank line only on one side, when blank lines are ignored, gets a plain gap
             const gap = row.type === 'ignored' ? '' : 'empty';
             const parts = row.type === 'changed' ? inlineDiff(result.left[row.left], result.right[row.right], options) : null;
-            return `<div class="row" data-row="${i}">`
+            return foldRow + `<div class="row${folded ? ' folded' : ''}" data-row="${i}">`
                 + cell('left', row.left, row.left === null ? gap : leftKind, parts && parts.left)
                 + cell('right', row.right, row.right === null ? gap : rightKind, parts && parts.right)
                 + '</div>';

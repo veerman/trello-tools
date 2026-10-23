@@ -11,6 +11,7 @@ board-backup/excluded/
 trello_data/
 
 # browser captures and local junk
+node_modules/
 *.har
 __pycache__/
 desktop.ini

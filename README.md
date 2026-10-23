@@ -18,11 +18,13 @@ All tools share one convention: `#` board, `##` list, `###` card (with `[colour]
 
 ## Tests
 
-Each file in tests/ runs on its own: `node tests/<name>.test.js` for the pages and `python tests/test_<name>.py` for the backup (the Drive test's last part needs rclone installed). Both exporters are checked against the same sample board in tests/fixtures, so their Markdown can't drift apart, and the board check is tested against the same files. Nothing to install beyond Node and Python.
+Each file in tests/ runs on its own: `node tests/<name>.test.js` for the pages and `python tests/test_<name>.py` for the backup (the Drive test's last part needs rclone installed). Both exporters are checked against the same sample board in tests/fixtures, so their Markdown can't drift apart, and the board check is tested against the same files. tests/css.test.js checks the built styles (below) have every class the pages use. Nothing to install beyond Node and Python.
 
 ## Setup
 
 ### Board editor and member manager
+
+The pages' styles are built ahead of time into `shared/tailwind.css` (Tailwind 3.4.17), so nothing styles the pages at load time. After adding or changing Tailwind classes in the pages, run `npm run css` in the repo folder to rebuild it (it fetches Tailwind the first time); `node tests/css.test.js` fails until you do.
 
 Plain web pages with no server code. Put the `board-editor`, `compare`, `member-tools`, and `shared` folders on any static host (GitHub Pages, Netlify, any web server) and open `board-editor/` or `member-tools/`. To run them on your own computer instead, run `python -m http.server 8000` in the repo folder and open http://localhost:8000/board-editor/.
 

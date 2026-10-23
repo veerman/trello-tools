@@ -168,3 +168,28 @@ const inlineDiff = (leftLine, rightLine, options = DEFAULT_COMPARE_OPTIONS) => {
     };
     return { left: parts(l), right: parts(r) };
 };
+
+// Long runs of matching rows to fold away, keeping `context` rows next to each difference.
+// A run folds only when that hides at least `minimum` rows; nothing folds without a difference.
+// Returns [{ start, end }] row ranges (end not included).
+const foldRanges = (rows, context = 3, minimum = 4) => {
+    const differs = (row) => row.type === 'changed' || row.type === 'removed' || row.type === 'added';
+    if (!rows.some(differs)) return [];
+    const ranges = [];
+    let runStart = null;
+    const fold = (runEnd) => {
+        const start = runStart === 0 ? 0 : runStart + context;
+        const end = runEnd === rows.length ? runEnd : runEnd - context;
+        if (end - start >= minimum) ranges.push({ start, end });
+    };
+    rows.forEach((row, i) => {
+        if (!differs(row)) {
+            if (runStart === null) runStart = i;
+        } else if (runStart !== null) {
+            fold(i);
+            runStart = null;
+        }
+    });
+    if (runStart !== null) fold(rows.length);
+    return ranges;
+};

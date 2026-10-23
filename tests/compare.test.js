@@ -8,8 +8,8 @@ const { plain, run } = require('./helpers');
 
 const context = vm.createContext({});
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'shared', 'diff.js'), 'utf8'), context);
-const { compareTexts, inlineDiff, diffSequences, DEFAULT_COMPARE_OPTIONS } = vm.runInContext(
-    '({ compareTexts, inlineDiff, diffSequences, DEFAULT_COMPARE_OPTIONS })', context);
+const { compareTexts, inlineDiff, diffSequences, foldRanges, DEFAULT_COMPARE_OPTIONS } = vm.runInContext(
+    '({ compareTexts, inlineDiff, diffSequences, foldRanges, DEFAULT_COMPARE_OPTIONS })', context);
 
 const compare = (left, right, options = {}) => plain(compareTexts(left.join('\n'), right.join('\n'), { ...DEFAULT_COMPARE_OPTIONS, ...options }));
 const types = (result) => result.rows.map(row => row.type);
@@ -137,6 +137,24 @@ test('a large board with one change is quick, and two unrelated files still show
     const apart = compare(big, other);
     assertComplete(apart);
     assert.strictEqual(apart.counts.changed, 4000);
+});
+
+test('long runs of matching lines fold, keeping three lines next to each difference', () => {
+    const lines = Array.from({ length: 30 }, (_, i) => `line ${i}`);
+    const edited = lines.slice();
+    edited[15] = 'line 15 changed';
+    const result = compare(lines, edited);
+    assert.deepStrictEqual(plain(foldRanges(result.rows)), [{ start: 0, end: 12 }, { start: 19, end: 30 }]);
+    // Two changes close together keep the short run between them open
+    edited[20] = 'line 20 changed';
+    assert.deepStrictEqual(plain(foldRanges(compare(lines, edited).rows)), [{ start: 0, end: 12 }, { start: 24, end: 30 }]);
+});
+
+test('nothing folds when the texts match, or when a run would hide only a few lines', () => {
+    const lines = Array.from({ length: 30 }, (_, i) => `line ${i}`);
+    assert.deepStrictEqual(plain(foldRanges(compare(lines, lines).rows)), []);
+    const short = ['a', 'b', 'c', 'd', 'e', 'f'];
+    assert.deepStrictEqual(plain(foldRanges(compare(short, ['a', 'b', 'c', 'X', 'e', 'f']).rows)), []);
 });
 
 run(tests);

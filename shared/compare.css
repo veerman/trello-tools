@@ -48,6 +48,19 @@
 .cmp-diff .empty { background: repeating-linear-gradient(-45deg, transparent 0 5px, rgba(255, 255, 255, 0.045) 5px 10px); }
 .cmp-diff .soft { color: #6b7280; }
 .cmp-diff .row.current .num:first-child, .cmp-diff .row.current .num:nth-child(3) { box-shadow: inset 3px 0 0 #e5e7eb; }
+.cmp-diff .row.folded { display: none; }
+.cmp-diff .fold {
+    display: flex;
+    justify-content: center;
+    gap: 1.25rem;
+    padding: 0.15rem 0;
+    font: 12px/20px system-ui, sans-serif;
+    color: #9ca3af;
+    background: #111827;
+    border-top: 1px solid #374151;
+    border-bottom: 1px solid #374151;
+}
+.cmp-diff .fold button:hover { color: #fff; }
 .cmp-message { font-family: system-ui, sans-serif; color: #9ca3af; text-align: center; padding: 4rem 1rem; }
 
 /* --- Ruler: where the differences are in the whole file, and the part on screen --- */

@@ -1,6 +1,6 @@
 # Board Editor
 
-Single-page app: index.html, script.js, style.css. Uses Tailwind (CDN), Font Awesome, and Toast UI Editor.
+Single-page app: index.html, script.js, style.css. Uses Tailwind (built into ../shared/tailwind.css, see the main README), Font Awesome, and Toast UI Editor.
 
 What it does:
 
@@ -9,6 +9,8 @@ What it does:
 3. Edit in Markdown or WYSIWYG mode. Views: Markdown, MD/Doc, Doc, MD/Board, Board, plus View on Trello.
 4. Save to file (filename derived from the board name, stamped with the date and time).
 5. Save to Trello: parses the Markdown and creates a brand new board in the chosen workspace, list by list, card by card, including cover colours, checklists (with ticks), and attachments. Rate-limit guard pauses every 80 requests.
+
+Unsaved edits: loading another board, file, or link asks first when the editor holds edits that haven't been saved to a file or to Trello, and so does leaving or reloading the page.
 
 Board check: the summary next to the Editor heading updates as you edit and opens a report with three parts. Problems (attachments that are not web links, descriptions over Trello's limit, nothing to create) block Save to Trello. Warnings point to content Save to Trello would ignore, by line number. Changes compare with the original: the board loaded from Trello, or the first file loaded if there was none, so an AI-edited file is compared with the export it came from. Save to Trello shows the report first whenever it has anything in it. "Copy report" puts it on the clipboard as plain text for an AI tool.
 
@@ -23,7 +25,7 @@ Help menu:
 - Query Board Prompt: same, with prompt_query.txt, for asking questions about a board without changing it.
 - Compare Documents: opens Compare (below). The board check's "Side by side" opens it with the original.
 
-Compare: the button next to Check covers the window with your document side by side with another version, lined up line by line with changed words marked. Pick the other version at the top: the original, a board from any workspace, a file (or drop one on the page), a Trello board or Markdown link, or pasted text. It stays picked until you choose another, so Compare reopens straight to it with your latest edits. Swap puts your document on the left (for comparing with a newer version), the ignore buttons skip trailing or leading spaces, extra spaces, blank lines, or case, n and p jump between differences, double-clicking a line of your document goes back to the editor with the cursor on it, and Esc closes. The view is ../shared/compare-view.js and the comparison ../shared/diff.js, also used by the standalone page in ../compare/.
+Compare: the button next to Check covers the window with your document side by side with another version, lined up line by line with changed words marked. Long runs of matching lines fold into one row (click it to open, or Show all). Pick the other version at the top: the original, a board from any workspace, a file (or drop one on the page), a Trello board or Markdown link, or pasted text. It stays picked until you choose another, so Compare reopens straight to it with your latest edits. Swap puts your document on the left (for comparing with a newer version), the ignore buttons skip trailing or leading spaces, extra spaces, blank lines, or case, n and p jump between differences, double-clicking a line of your document goes back to the editor with the cursor on it, and Esc closes. The view is ../shared/compare-view.js and the comparison ../shared/diff.js, also used by the standalone page in ../compare/.
 
 The editor fetches trello-markdown-guide.md, prompt_modify.txt, and prompt_query.txt from its own folder, so keep them next to index.html.
 

@@ -766,6 +766,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // The board as first loaded, so the check can show what an edit or an AI pass changed
     let originalMarkdown = null;
     let originalLabel = '';
+    // The editor's text as last loaded or saved, so loading something else or leaving can ask first
+    let savedMarkdown = '';
+    let shownBoardId = '';   // the board in the editor, to go back to when a switch is cancelled
+    const LOADING_BOARD = 'Loading the board from Trello...';
     let checkDebounce;
     
     const generateModifyPromptBtn = document.getElementById('generate-modify-prompt-btn');
@@ -805,7 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
             promptTextarea.value = finalPrompt;
             promptModal.classList.remove('hidden');
         } catch (error) {
-            showStatus("Error generating prompt: " + error.message, true);
+            showStatus("Could not build the prompt: " + error.message, true);
             console.error(error);
         } finally {
             btnElement.innerHTML = originalHtml;
@@ -861,6 +865,22 @@ document.addEventListener('DOMContentLoaded', () => {
     editorAdapter = new EditorAdapter('editor-container', {
         height: '600px',
         syncTarget: hiddenTextArea
+    });
+
+    // --- Unsaved edits ---
+    // Text put in the editor by a load (or a loading or error message) is not an edit
+    const showInEditor = (text) => {
+        editorAdapter.setMarkdown(text);
+        savedMarkdown = editorAdapter.getMarkdown();
+    };
+    const markSaved = () => { savedMarkdown = editorAdapter.getMarkdown(); };
+    const hasUnsavedEdits = () => editorAdapter.getMarkdown().trim() !== savedMarkdown.trim();
+    const okToReplace = (what) => !hasUnsavedEdits()
+        || confirm(`Your edits haven't been saved to a file or to Trello.\n\nLoad ${what} anyway and lose them?`);
+    window.addEventListener('beforeunload', (e) => {
+        if (!hasUnsavedEdits()) return;
+        e.preventDefault();
+        e.returnValue = '';
     });
 
     const editorContainer = document.getElementById('editor-container');
@@ -929,7 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         if (!data.lists || data.lists.length === 0) {
-            previewContainer.innerHTML = '<div class="text-gray-500 text-sm italic w-full text-center mt-10">no board data available to render.</div>';
+            previewContainer.innerHTML = '<div class="text-gray-500 text-sm italic w-full text-center mt-10">No lists to show yet.</div>';
             return;
         }
 
@@ -1034,14 +1054,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    trello.onPause = (seconds) => showStatus(`rate limit safety: pausing for ${seconds} seconds...`, false, seconds * 1000);
+    trello.onPause = (seconds) => showStatus(`Pausing for ${seconds} seconds to stay within Trello's limits...`, false, seconds * 1000);
     const trelloFetch = (endpoint, options) => trello.fetch(endpoint, options);
 
     const loadMemberInfo = async () => {
         try {
             const member = await trelloFetch('members/me');
             const identifier = member.email || member.fullName || member.username;
-            logoutBtn.innerHTML = `<i class="fa-solid fa-power-off"></i> disconnect ${escapeHtml(identifier)}`;
+            logoutBtn.innerHTML = `<i class="fa-solid fa-power-off"></i> Disconnect ${escapeHtml(identifier)}`;
             logoutBtn.classList.remove('hidden');
         } catch (e) {
             console.error("failed to load user info", e);
@@ -1074,7 +1094,7 @@ document.addEventListener('DOMContentLoaded', () => {
             populateWorkspaces();
             refreshBoardsBtn.querySelector('i').classList.remove('fa-spin');
         } catch (e) {
-            showStatus("error loading boards: " + e.message, true);
+            showStatus("Could not load your boards: " + e.message, true);
             refreshBoardsBtn.querySelector('i').classList.remove('fa-spin');
         }
     };
@@ -1132,6 +1152,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         lastLoadedFilename = null;
         const option = boardSelector.options[boardSelector.selectedIndex];
+        shownBoardId = boardId;
         updateAddress({ board: option.dataset.shortLink, url: null });
         const boardUrl = option.dataset.url;
         if (boardUrl) {
@@ -1140,20 +1161,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const currentFetchId = ++activeBoardFetchId;
-        editorAdapter.setMarkdown("loading board data...");
-        
+        showInEditor(LOADING_BOARD);
+
         try {
             const md = await fetchBoardToMarkdown(boardId);
             if (currentFetchId !== activeBoardFetchId) return;
 
-            editorAdapter.setMarkdown(md);
+            showInEditor(md);
             setOriginal(md, `"${option.textContent}" from Trello`);
         } catch (err) {
             if (currentFetchId !== activeBoardFetchId) return;
-            editorAdapter.setMarkdown("error: " + err.message);
+            showInEditor("Could not load the board: " + err.message);
         }
     };
-    boardSelector.addEventListener('change', loadSelectedBoard);
+    boardSelector.addEventListener('change', () => {
+        const option = boardSelector.options[boardSelector.selectedIndex];
+        if (boardSelector.value && !okToReplace(`"${option.textContent}"`)) {
+            boardSelector.value = shownBoardId;
+            return;
+        }
+        loadSelectedBoard();
+    });
 
     // A board from a link (?board=): picked in the selectors when it is in one of your workspaces,
     // as if you had picked it yourself; otherwise loaded by its Trello link
@@ -1173,7 +1201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadFromUrl = async () => {
         const url = urlInput.value.trim();
         if (!url) {
-            showStatus("please enter a url first.", true);
+            showStatus("Enter a link first.", true);
             return;
         }
 
@@ -1185,37 +1213,39 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (trelloBoardMatch && trelloToken) {
                 const shortId = trelloBoardMatch[1];
-                editorAdapter.setMarkdown("loading trello board...");
-                
+                showInEditor(LOADING_BOARD);
+
                 const md = await fetchBoardToMarkdown(shortId);
-                editorAdapter.setMarkdown(md);
+                showInEditor(md);
                 setOriginal(md, `"${boardTitle(md)}" from Trello`);
                 updateAddress({ board: shortId, url: null });
                 saveToFileBtn.disabled = false;
                 if (trelloToken && workspaceSelector.value) saveToTrelloBtn.disabled = false;
-                showStatus("successfully imported trello board from url.");
+                showStatus("Loaded the board from Trello.");
             } else {
                 // Fallback standard fetch for raw markdown files
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`http error: ${response.status}`);
                 const text = await response.text();
 
-                editorAdapter.setMarkdown(text);
+                showInEditor(text);
                 // A file loaded after a board is usually the edited version, so keep the board as the original
                 if (originalMarkdown === null) setOriginal(text, url);
                 updateAddress({ url, board: null });
                 saveToFileBtn.disabled = false;
                 if (trelloToken && workspaceSelector.value) saveToTrelloBtn.disabled = false;
-                showStatus("successfully loaded from url.");
+                showStatus("Loaded the file from the link.");
             }
         } catch (e) {
-            showStatus("failed to load url (cors error?): " + e.message, true);
-            if (editorAdapter.getMarkdown().trim() === 'loading trello board...') editorAdapter.setMarkdown('');
+            showStatus("Could not load the link (the site may not allow it): " + e.message, true);
+            if (editorAdapter.getMarkdown().trim() === LOADING_BOARD) showInEditor('');
         } finally {
             toggleSpinner(loadUrlBtn, false, '<i class="fa-solid fa-cloud-arrow-down"></i>');
         }
     };
-    loadUrlBtn.addEventListener('click', loadFromUrl);
+    loadUrlBtn.addEventListener('click', () => {
+        if (okToReplace('the link')) loadFromUrl();
+    });
 
     saveToFileBtn.addEventListener('click', () => {
         const content = editorAdapter.getMarkdown();
@@ -1254,17 +1284,22 @@ document.addEventListener('DOMContentLoaded', () => {
         a.download = confirmedFilename;
         a.click();
         URL.revokeObjectURL(url);
+        markSaved();
     });
 
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        if (!okToReplace(`"${file.name}"`)) {
+            fileInput.value = '';
+            return;
+        }
 
         lastLoadedFilename = file.name.replace(/\.md$/i, '').replace(/\s*\[\d{4}-\d{2}-\d{2}\s\d{2}-\d{2}-\d{2}\]$/, '');
 
         const reader = new FileReader();
         reader.onload = (evt) => {
-            editorAdapter.setMarkdown(evt.target.result);
+            showInEditor(evt.target.result);
             if (originalMarkdown === null) setOriginal(evt.target.result, file.name);
             updateAddress({ board: null, url: null });
             if (trelloToken && workspaceSelector.value) saveToTrelloBtn.disabled = false;
@@ -1277,11 +1312,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (saveToTrelloBtn.disabled) return;
         
         const wsId = workspaceSelector.value;
-        if (!wsId) { showStatus("please select a workspace above.", true); return; }
+        if (!wsId) { showStatus("Pick a workspace above first.", true); return; }
         const wsName = workspaceSelector.options[workspaceSelector.selectedIndex].text;
 
         const data = parseMarkdownToData(editorAdapter.getMarkdown());
-        if (!data.lists.length) { showStatus("nothing to create: add at least one ## list.", true); return; }
+        if (!data.lists.length) { showStatus("Nothing to create: add at least one ## list.", true); return; }
 
         let totalOps = 1;
         totalOps += data.lists.length;
@@ -1295,7 +1330,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        const confirmedName = prompt(`create board "${data.name}" in workspace "${wsName}"?\n(${totalOps} total api operations)`, data.name);
+        const confirmedName = prompt(`Create board "${data.name}" in workspace "${wsName}"?\n(${totalOps} Trello requests)`, data.name);
         if (!confirmedName) return;
 
         toggleSpinner(saveToTrelloBtn, true, 'saving...');
@@ -1304,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateProgress = () => {
             opsDone++;
             const percent = Math.round((opsDone / totalOps) * 100);
-            showStatus(`saving... ${percent}% (${opsDone}/${totalOps} operations)`, false, 999999);
+            showStatus(`Saving... ${percent}% (${opsDone} of ${totalOps} steps)`, false, 999999);
         };
 
         try {
@@ -1343,14 +1378,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-            showStatus(`success! board "${confirmedName}" created in "${wsName}".`);
+            showStatus(`Created "${confirmedName}" in "${wsName}".`);
+            markSaved();
             await loadBoards();
             workspaceSelector.value = wsId;
             populateBoards(wsId);
             boardSelector.value = newBoard.id;
+            shownBoardId = newBoard.id;
+            updateAddress({ workspace: wsId, board: newBoard.shortLink, url: null });
 
         } catch (e) {
-            showStatus("error: " + e.message, true);
+            showStatus("Save to Trello stopped: " + e.message, true);
             console.error(e);
         } finally {
             toggleSpinner(saveToTrelloBtn, false, 'Save to Trello <i class="fa-solid fa-cloud-arrow-up"></i>');
@@ -1447,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await navigator.clipboard.writeText(report);
         } catch (err) {
-            showStatus("could not copy the report. select the text and copy it instead.", true);
+            showStatus("Could not copy the report. Select the text and copy it instead.", true);
             return;
         }
         const originalHtml = copyCheckBtn.innerHTML;
@@ -1718,7 +1756,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (boardParam && trelloToken) {
             await openBoardFromLink(boardParam);
         } else if (boardParam) {
-            showStatus("connect to trello to open the board in this link.", true, 15000);
+            showStatus("Connect to Trello to open the board in this link.", true, 15000);
         } else if (urlParam) {
             urlInput.value = urlParam;
             await loadFromUrl();

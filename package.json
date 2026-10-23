@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "scripts": {
+    "css": "npx --yes tailwindcss@3.4.17 -i shared/tailwind.input.css -o shared/tailwind.css --minify"
+  }
+}
