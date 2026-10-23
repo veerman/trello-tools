@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="https://uicdn.toast.com/editor/3.2.2/theme/toastui-editor-dark.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
+    <link rel="stylesheet" href="../shared/compare.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
@@ -51,7 +52,7 @@
                             </div>
                             <div class="absolute right-full top-0 pr-1 hidden group-hover/compare:block w-48 z-50">
                                 <div class="bg-gray-800 border border-gray-700 rounded shadow-xl py-1">
-                                    <a href="../compare/" data-open-compare class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50" title="The original on the left, the editor on the right">
+                                    <a href="#" data-open-compare="original" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50" title="The original on the left, the editor on the right">
                                         <i class="fa-solid fa-table-columns text-blue-400 w-4 text-center"></i> Side by side
                                     </a>
                                     <a href="https://editor.mergely.com/" target="_blank" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50">
@@ -162,6 +163,9 @@
                         <button id="check-summary-btn" class="text-[11px] font-medium px-2 py-1 rounded border border-gray-600 hover:bg-gray-700 transition-colors flex items-center gap-1.5" title="Check the board before saving">
                             <i class="fa-solid fa-list-check text-gray-400"></i> <span id="check-summary-text" class="text-gray-400">Check</span>
                         </button>
+                        <button data-open-compare class="text-[11px] font-medium px-2 py-1 rounded border border-gray-600 hover:bg-gray-700 transition-colors flex items-center gap-1.5 text-gray-400" title="See your document side by side with another version">
+                            <i class="fa-solid fa-code-compare"></i> Compare
+                        </button>
                     </div>
 
                     <div class="flex bg-gray-700 rounded p-0.5 space-x-0.5" id="view-toggle-group">
@@ -226,7 +230,7 @@
                 <p class="text-xs text-gray-500">Tip: copy the report and paste it into your AI tool along with the board Markdown to have it fix the problems.</p>
             </div>
             <div class="p-4 border-t border-gray-700 bg-gray-900 flex justify-end gap-2">
-                <button data-open-compare class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium rounded transition-colors flex items-center gap-2 shadow-sm" title="The original on the left, the editor on the right">
+                <button data-open-compare="original" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium rounded transition-colors flex items-center gap-2 shadow-sm" title="The original on the left, the editor on the right">
                     <i class="fa-solid fa-table-columns"></i> Side by side
                 </button>
                 <button id="copy-check-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium rounded transition-colors flex items-center gap-2 shadow-sm">
@@ -239,9 +243,64 @@
         </div>
     </div>
 
+    <div id="compare-overlay" class="hidden fixed inset-0 z-[10000] bg-[#1a1a1a] text-gray-200 flex flex-col">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 bg-gray-900 border-b border-gray-700 text-xs">
+            <span class="text-sm font-bold text-white flex items-center gap-2"><i class="fa-solid fa-code-compare text-blue-500"></i> Compare with</span>
+            <div class="flex flex-wrap gap-1">
+                <button class="cmp-btn" data-source="original" title="The board or file as you first loaded it"><i class="fa-solid fa-clock-rotate-left"></i> Original</button>
+                <button class="cmp-btn" data-source="board" title="A board from one of your workspaces"><i class="fa-brands fa-trello"></i> Board</button>
+                <button class="cmp-btn" data-source="file" title="A file on your computer (or drop one here)"><i class="fa-solid fa-folder-open"></i> File</button>
+                <button class="cmp-btn" data-source="link" title="A Trello board link or a link to a Markdown file"><i class="fa-solid fa-link"></i> Link</button>
+                <button class="cmp-btn" data-source="paste" title="Text someone sent you"><i class="fa-regular fa-paste"></i> Paste</button>
+            </div>
+            <div id="compare-board-picker" class="hidden flex gap-2">
+                <select id="compare-workspace" class="h-7 max-w-[14rem] bg-gray-700 border border-gray-600 text-white rounded text-xs px-2 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    <option value="">-- Workspace --</option>
+                </select>
+                <select id="compare-board" class="h-7 max-w-[18rem] bg-gray-700 border border-gray-600 text-white rounded text-xs px-2 focus:ring-1 focus:ring-blue-500 focus:outline-none" disabled>
+                    <option value="">-- Board --</option>
+                </select>
+            </div>
+            <div id="compare-link-picker" class="hidden flex gap-2">
+                <input type="text" id="compare-link-input" placeholder="Trello board link or Markdown file link" class="w-72 h-7 bg-gray-700 border border-gray-600 rounded text-xs px-2 text-white focus:ring-1 focus:ring-blue-500 focus:outline-none placeholder-gray-500">
+                <button id="compare-link-btn" class="cmp-btn">Load</button>
+            </div>
+            <input type="file" id="compare-file-input" class="hidden" accept=".txt,.md"/>
+            <div class="flex gap-2 ml-auto">
+                <button id="compare-swap-btn" class="cmp-btn" title="Swap left and right"><i class="fa-solid fa-arrow-right-arrow-left"></i> Swap</button>
+                <button id="compare-close-btn" class="cmp-btn" title="Back to the editor (Esc)"><i class="fa-solid fa-xmark"></i> Close</button>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-1.5 bg-gray-900 border-b border-gray-700 text-xs">
+            <div class="flex items-center gap-1">
+                <button id="compare-prev-btn" class="cmp-nav" title="Previous difference (p)"><i class="fa-solid fa-chevron-up"></i></button>
+                <button id="compare-next-btn" class="cmp-nav" title="Next difference (n)"><i class="fa-solid fa-chevron-down"></i></button>
+                <span id="compare-summary" class="ml-2 text-gray-400"></span>
+            </div>
+            <div id="compare-ignore" class="flex flex-wrap items-center gap-1 ml-auto">
+                <span class="text-gray-500 mr-1">Ignore</span>
+            </div>
+        </div>
+        <div id="compare-heads" class="cmp-heads">
+            <div id="compare-head-left" class="cmp-head"></div>
+            <div id="compare-head-right" class="cmp-head"></div>
+        </div>
+        <div class="flex-1 min-h-0 flex relative">
+            <div id="compare-scroller" class="flex-1 min-w-0 overflow-y-auto relative">
+                <div id="compare-rows" class="cmp-diff"></div>
+            </div>
+            <div id="compare-ruler" class="cmp-ruler" title="Differences: red is only on the left, green only on the right"></div>
+            <div id="compare-paste" class="hidden absolute inset-0 z-10 bg-[#1a1a1a]">
+                <textarea id="compare-paste-input" class="w-full h-full resize-none bg-transparent text-gray-200 p-3 font-mono text-[13px] leading-5 focus:outline-none" spellcheck="false" placeholder="Paste the other version here. It compares as soon as you paste (or press Ctrl+Enter after typing)."></textarea>
+            </div>
+        </div>
+    </div>
+
     <script src="https://uicdn.toast.com/editor/3.2.2/toastui-editor-all.min.js"></script>
-    
+
     <script src="../shared/trello.js"></script>
+    <script src="../shared/diff.js"></script>
+    <script src="../shared/compare-view.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

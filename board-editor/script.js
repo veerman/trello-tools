@@ -1414,22 +1414,225 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => copyCheckBtn.innerHTML = originalHtml, 2000);
     });
 
-    // Side by side: the Compare page opens with the original on the left and the editor's text on the right.
-    // It reads this once and removes it (compare/compare.js).
-    const COMPARE_HANDOFF_KEY = 'trello_tools_compare_handoff';
+    // --- Compare: the document being edited, side by side with another version ---
+    const compareOverlay = document.getElementById('compare-overlay');
+    const compareHeads = document.getElementById('compare-heads');
+    const compareHeadLeft = document.getElementById('compare-head-left');
+    const compareHeadRight = document.getElementById('compare-head-right');
+    const compareSourceBtns = compareOverlay.querySelectorAll('[data-source]');
+    const compareBoardPicker = document.getElementById('compare-board-picker');
+    const compareWorkspace = document.getElementById('compare-workspace');
+    const compareBoard = document.getElementById('compare-board');
+    const compareLinkPicker = document.getElementById('compare-link-picker');
+    const compareLinkInput = document.getElementById('compare-link-input');
+    const compareFileInput = document.getElementById('compare-file-input');
+    const comparePaste = document.getElementById('compare-paste');
+    const comparePasteInput = document.getElementById('compare-paste-input');
+    const NO_OTHER_VERSION = 'Pick the other version above: the original, a Trello board, a file, a link, or pasted text. You can also drop a file here.';
+
+    // The other version stays picked while the page is open, so Compare opens straight to it next time
+    let compareOther = null;          // { source, label, text }
+    let compareYoursOnLeft = false;   // the other version starts on the left, as the older one
+    let compareFetchId = 0;
+
+    // Double-click a line of your document to edit it there
+    const compareView = new CompareView({
+        scroller: document.getElementById('compare-scroller'),
+        rows: document.getElementById('compare-rows'),
+        ruler: document.getElementById('compare-ruler'),
+        summary: document.getElementById('compare-summary'),
+        prevBtn: document.getElementById('compare-prev-btn'),
+        nextBtn: document.getElementById('compare-next-btn'),
+        ignoreGroup: document.getElementById('compare-ignore')
+    }, { onLine: (side, line) => { if (side === (compareYoursOnLeft ? 'left' : 'right')) editLine(line); } });
+
+    const originalVersion = () => originalMarkdown === null ? null
+        : { source: 'original', label: `Original: ${originalLabel}`, text: originalMarkdown };
+
+    const runCompare = (keepPlace = false) => {
+        const yours = { label: 'Your document', text: editorAdapter.getMarkdown() };
+        const other = compareOther || { label: 'Other version', text: '' };
+        const [left, right] = compareYoursOnLeft ? [yours, other] : [other, yours];
+        [[compareHeadLeft, left], [compareHeadRight, right]].forEach(([head, { label, text }]) => {
+            const lines = splitLines(text).length;
+            head.innerHTML = `<span class="name" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`
+                + `<span class="lines">${lines} line${lines === 1 ? '' : 's'}</span>`;
+        });
+        if (compareOther) compareView.compare(left.text, right.text, { keepPlace });
+        else compareView.clear(NO_OTHER_VERSION);
+        compareHeads.style.marginRight = `${compareView.rightEdge()}px`;
+    };
+
+    // Which source is picked, and its board or link picker
+    const showCompareSource = (source) => {
+        compareSourceBtns.forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.source === source)));
+        compareBoardPicker.classList.toggle('hidden', source !== 'board');
+        compareLinkPicker.classList.toggle('hidden', source !== 'link');
+        comparePaste.classList.add('hidden');
+    };
+
+    const setCompareOther = (other) => {
+        compareOther = other;
+        showCompareSource(other.source);
+        runCompare();
+    };
+
+    // Boards and links load from Trello or the web; only the latest pick counts
+    const loadCompareOther = async (source, loadingMessage, load) => {
+        const fetchId = ++compareFetchId;
+        compareView.clear(loadingMessage);
+        try {
+            const other = await load();
+            if (fetchId === compareFetchId) setCompareOther({ source, ...other });
+        } catch (err) {
+            if (fetchId === compareFetchId) compareView.clear(`<span class="text-red-400">Could not load it: ${escapeHtml(err.message)}</span>`);
+        }
+    };
+
+    const openCompare = (source = null) => {
+        checkModal.classList.add('hidden');
+        compareOverlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        // The original can change when another board is loaded, so take it fresh
+        if (source === 'original' || !compareOther || compareOther.source === 'original') compareOther = originalVersion();
+        showCompareSource(compareOther ? compareOther.source : null);
+        runCompare();
+    };
+
+    const closeCompare = () => {
+        compareOverlay.classList.add('hidden');
+        document.body.style.overflow = '';
+    };
+
+    // Back to the editor with the cursor on that line, in a view that shows the Markdown
+    const editLine = (line) => {
+        closeCompare();
+        if (editorContainerDom.classList.contains('hidden') || !editorAdapter.instance.isMarkdownMode()) {
+            Array.from(viewToggleBtns).find(btn => btn.dataset.mode === 'markdown').click();
+        }
+        setTimeout(() => {
+            editorAdapter.instance.setSelection([line + 1, 1], [line + 1, 1]);
+            editorAdapter.instance.focus();
+        }, 50);
+    };
+
     document.querySelectorAll('[data-open-compare]').forEach(btn => btn.addEventListener('click', (e) => {
         e.preventDefault();
-        const handoff = {
-            left: { label: originalLabel ? `Original: ${originalLabel}` : 'Original', text: originalMarkdown || '' },
-            right: { label: 'Editor', text: editorAdapter.getMarkdown() }
-        };
-        try {
-            localStorage.setItem(COMPARE_HANDOFF_KEY, JSON.stringify(handoff));
-        } catch (err) {
-            showStatus("the board is too big to hand over. save both versions to files and open them in Compare.", true);
-        }
-        window.open('../compare/', '_blank', 'noopener');
+        openCompare(btn.dataset.openCompare || null);
     }));
+    document.getElementById('compare-close-btn').addEventListener('click', closeCompare);
+    document.getElementById('compare-swap-btn').addEventListener('click', () => {
+        compareYoursOnLeft = !compareYoursOnLeft;
+        runCompare(true);
+    });
+    window.addEventListener('resize', () => {
+        if (!compareOverlay.classList.contains('hidden')) compareHeads.style.marginRight = `${compareView.rightEdge()}px`;
+    });
+
+    const populateCompareBoards = () => {
+        const ws = workspaces[compareWorkspace.value];
+        compareBoard.innerHTML = '<option value="">-- Board --</option>' + (ws ? ws.boards.slice().sort((a, b) => a.name.localeCompare(b.name))
+            .map(b => `<option value="${escapeHtml(b.id)}">${escapeHtml(b.name)}</option>`).join('') : '');
+        compareBoard.disabled = !ws;
+    };
+
+    const pickCompareBoard = async () => {
+        if (!trelloToken) {
+            compareView.clear('Connect to Trello in the editor first, then pick a board here.');
+            return;
+        }
+        showCompareSource('board');
+        if (!Object.keys(workspaces).length) await loadBoards();
+        const chosen = compareWorkspace.value || workspaceSelector.value;
+        compareWorkspace.innerHTML = '<option value="">-- Workspace --</option>' + Object.values(workspaces)
+            .sort((a, b) => a.displayName.localeCompare(b.displayName))
+            .map(ws => `<option value="${escapeHtml(ws.id)}">${escapeHtml(ws.displayName)}</option>`).join('');
+        if (workspaces[chosen]) compareWorkspace.value = chosen;
+        populateCompareBoards();
+        (compareWorkspace.value ? compareBoard : compareWorkspace).focus();
+    };
+
+    const loadCompareLink = () => {
+        const url = compareLinkInput.value.trim();
+        if (!url) return compareLinkInput.focus();
+        const boardMatch = url.match(/trello\.com\/b\/([a-zA-Z0-9]+)/);
+        loadCompareOther('link', 'Loading...', async () => {
+            if (boardMatch && trelloToken) {
+                const md = await fetchBoardToMarkdown(boardMatch[1]);
+                return { label: `Board: ${boardTitle(md)}`, text: md };
+            }
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`http error: ${response.status}`);
+            return { label: url, text: await response.text() };
+        });
+    };
+
+    const usePastedText = () => {
+        if (comparePasteInput.value.trim()) setCompareOther({ source: 'paste', label: 'Pasted text', text: comparePasteInput.value });
+    };
+
+    compareSourceBtns.forEach(btn => btn.addEventListener('click', () => {
+        const source = btn.dataset.source;
+        if (source === 'original') {
+            const original = originalVersion();
+            if (original) setCompareOther(original);
+            else compareView.clear('There is no original yet. It is the board or file you first load in the editor.');
+        } else if (source === 'board') {
+            pickCompareBoard();
+        } else if (source === 'file') {
+            compareFileInput.click();
+        } else if (source === 'link') {
+            showCompareSource('link');
+            compareLinkInput.focus();
+        } else if (source === 'paste') {
+            showCompareSource('paste');
+            comparePaste.classList.remove('hidden');
+            comparePasteInput.focus();
+            comparePasteInput.select();
+        }
+    }));
+
+    compareWorkspace.addEventListener('change', populateCompareBoards);
+    compareBoard.addEventListener('change', () => {
+        const option = compareBoard.options[compareBoard.selectedIndex];
+        if (!compareBoard.value) return;
+        loadCompareOther('board', 'Loading the board from Trello...', async () => ({
+            label: `Board: ${option.textContent}`,
+            text: await fetchBoardToMarkdown(compareBoard.value)
+        }));
+    });
+    document.getElementById('compare-link-btn').addEventListener('click', loadCompareLink);
+    compareLinkInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadCompareLink(); });
+    compareFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setCompareOther({ source: 'file', label: file.name, text: await file.text() });
+        compareFileInput.value = '';
+    });
+    comparePasteInput.addEventListener('paste', () => setTimeout(usePastedText, 0));
+
+    // A file someone sent you: drop it anywhere on Compare
+    compareOverlay.addEventListener('dragover', (e) => {
+        if ([...e.dataTransfer.types].includes('Files')) e.preventDefault();
+    });
+    compareOverlay.addEventListener('drop', async (e) => {
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
+        e.preventDefault();
+        setCompareOther({ source: 'file', label: file.name, text: await file.text() });
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (compareOverlay.classList.contains('hidden')) return;
+        if (e.key === 'Escape') return closeCompare();
+        if (e.target === comparePasteInput) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') usePastedText();
+            return;
+        }
+        if (e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+        if (e.key === 'n' || e.key === 'j') compareView.next();
+        if (e.key === 'p' || e.key === 'k') compareView.previous();
+    });
 
     const init = async () => {
         if (trelloToken) {

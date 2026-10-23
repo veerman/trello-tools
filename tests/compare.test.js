@@ -1,5 +1,5 @@
 // Run: node tests/compare.test.js
-// Checks the Compare page's line and word comparison (compare/diff.js).
+// Checks the Compare page's line and word comparison (shared/diff.js).
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -7,7 +7,7 @@ const vm = require('vm');
 const { plain, run } = require('./helpers');
 
 const context = vm.createContext({});
-vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'compare', 'diff.js'), 'utf8'), context);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'shared', 'diff.js'), 'utf8'), context);
 const { compareTexts, inlineDiff, diffSequences, DEFAULT_COMPARE_OPTIONS } = vm.runInContext(
     '({ compareTexts, inlineDiff, diffSequences, DEFAULT_COMPARE_OPTIONS })', context);
 

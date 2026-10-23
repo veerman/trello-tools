@@ -1,0 +1,58 @@
+/* The side-by-side view (compare-view.js), used by the Compare page and the Board Editor */
+
+/* --- Buttons: next/previous, ignore choices, and tools --- */
+.cmp-nav, .cmp-btn, .cmp-ignore {
+    border: 1px solid #4b5563;
+    border-radius: 0.25rem;
+    background: #374151;
+    color: #e5e7eb;
+    transition: background-color 0.15s;
+}
+.cmp-nav { width: 1.75rem; height: 1.75rem; }
+.cmp-btn { padding: 0.3rem 0.6rem; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+.cmp-ignore { padding: 0.2rem 0.5rem; color: #9ca3af; }
+.cmp-nav:hover:not(:disabled), .cmp-btn:hover:not(:disabled), .cmp-ignore:hover { background: #4b5563; color: #fff; }
+.cmp-nav:disabled, .cmp-btn:disabled { opacity: 0.4; cursor: default; }
+.cmp-btn.primary, .cmp-btn[aria-pressed="true"] { background: #2563eb; border-color: #2563eb; color: #fff; }
+.cmp-btn.primary:hover { background: #3b82f6; }
+.cmp-ignore[aria-pressed="true"] { background: #1e3a8a; border-color: #2563eb; color: #fff; }
+
+/* --- Headings above the two sides --- */
+.cmp-heads {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: #111827;
+    border-bottom: 1px solid #374151;
+    font-size: 0.75rem;
+}
+.cmp-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.75rem; min-width: 0; }
+.cmp-head + .cmp-head { border-left: 1px solid #374151; }
+.cmp-head .name { color: #e5e7eb; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmp-head .lines { color: #6b7280; white-space: nowrap; }
+
+/* --- Rows: both sides of a line in the same row so they stay lined up --- */
+.cmp-diff { font: 13px/20px ui-monospace, SFMono-Regular, Consolas, monospace; padding-bottom: 40vh; color: #e5e7eb; }
+.cmp-diff .row { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr) 3.5rem minmax(0, 1fr); }
+.cmp-diff .num { color: #6b7280; text-align: right; padding: 0 0.6rem; user-select: none; }
+.cmp-diff .text { white-space: pre-wrap; overflow-wrap: anywhere; padding: 0 0.75rem; min-height: 20px; }
+.cmp-diff .num:nth-child(3) { border-left: 1px solid #374151; }
+
+.cmp-diff .del { background: rgba(248, 81, 73, 0.14); }
+.cmp-diff .ins { background: rgba(46, 160, 67, 0.14); }
+.cmp-diff .num.del { color: #fca5a5; }
+.cmp-diff .num.ins { color: #86efac; }
+.cmp-diff .del mark { background: rgba(248, 81, 73, 0.5); color: inherit; border-radius: 2px; }
+.cmp-diff .ins mark { background: rgba(46, 160, 67, 0.5); color: inherit; border-radius: 2px; }
+.cmp-diff .empty { background: repeating-linear-gradient(-45deg, transparent 0 5px, rgba(255, 255, 255, 0.045) 5px 10px); }
+.cmp-diff .soft { color: #6b7280; }
+.cmp-diff .row.current .num:first-child, .cmp-diff .row.current .num:nth-child(3) { box-shadow: inset 3px 0 0 #3b82f6; }
+.cmp-message { font-family: system-ui, sans-serif; color: #9ca3af; text-align: center; padding: 4rem 1rem; }
+
+/* --- Ruler: where the differences are in the whole file, and the part on screen --- */
+.cmp-ruler { position: relative; width: 14px; flex-shrink: 0; background: #111827; border-left: 1px solid #374151; cursor: pointer; }
+.cmp-ruler .mark { position: absolute; left: 1px; right: 1px; min-height: 3px; }
+.cmp-ruler .mark i { position: absolute; top: 0; bottom: 0; width: 50%; }
+.cmp-ruler .mark .l { left: 0; background: #f85149; }
+.cmp-ruler .mark .r { right: 0; background: #3fb950; }
+.cmp-ruler .mark.current { outline: 1px solid #93c5fd; }
+.cmp-ruler .window { position: absolute; left: 0; right: 0; background: rgba(255, 255, 255, 0.12); pointer-events: none; }

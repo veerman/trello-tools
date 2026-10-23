@@ -21,7 +21,9 @@ Help menu:
 - Updates Guide: opens updates-guide.html, the step-by-step process for updating a board.
 - Modify Board Prompt: shows prompt_modify.txt with the Markdown guide filled in, ready to copy into an AI tool along with a chunk of the board and a list of changes.
 - Query Board Prompt: same, with prompt_query.txt, for asking questions about a board without changing it.
-- Compare Markdown: "Side by side" opens the Compare page (../compare/) with the original on the left and the editor's text on the right; the board check has the same button. Links to external diff sites follow.
+- Compare Markdown: "Side by side" opens Compare with the original (the board check has the same button). Links to external diff sites follow.
+
+Compare: the button next to Check covers the window with your document side by side with another version, lined up line by line with changed words marked. Pick the other version at the top: the original, a board from any workspace, a file (or drop one on the page), a Trello board or Markdown link, or pasted text. It stays picked until you choose another, so Compare reopens straight to it with your latest edits. Swap puts your document on the left (for comparing with a newer version), the ignore buttons skip trailing or leading spaces, extra spaces, blank lines, or case, n and p jump between differences, double-clicking a line of your document goes back to the editor with the cursor on it, and Esc closes. The view is ../shared/compare-view.js and the comparison ../shared/diff.js, also used by the standalone page in ../compare/.
 
 The editor fetches trello-markdown-guide.md, prompt_modify.txt, and prompt_query.txt from its own folder, so keep them next to index.html.
 

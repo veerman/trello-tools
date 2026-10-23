@@ -1,4 +1,4 @@
-// Line-by-line comparison of two texts, for the Compare page (index.html, compare.js).
+// Line-by-line comparison of two texts, for the side-by-side view (compare-view.js).
 // Plain functions with no page code, so the Node tests can run them.
 
 // What to ignore when deciding whether two lines are the same. Lines are always shown as written.
@@ -6,7 +6,7 @@ const DEFAULT_COMPARE_OPTIONS = { trailing: true, leading: false, spaces: false,
 
 // Past this many added plus removed lines, the rest of the texts counts as one big change,
 // which keeps memory in check when two very different files are compared
-const MAX_EDITS = 3000;
+const DIFF_MAX_EDITS = 3000;
 
 const splitLines = (text) => {
     if (!text) return [];
@@ -28,7 +28,7 @@ const compareKey = (line, options) => {
 
 // Shortest list of edits between two lists of strings (Myers' algorithm), as
 // ['same', i, j], ['removed', i] and ['added', j], in order
-const diffSequences = (a, b, maxEdits = MAX_EDITS) => {
+const diffSequences = (a, b, maxEdits = DIFF_MAX_EDITS) => {
     const ops = [];
     let start = 0;
     while (start < a.length && start < b.length && a[start] === b[start]) ops.push(['same', start, start++]);
@@ -137,10 +137,10 @@ const compareTexts = (leftText, rightText, options = DEFAULT_COMPARE_OPTIONS) =>
 };
 
 // The parts of two changed lines, word by word: { left, right }, each a list of [text, differs]
-const WORD = /\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu;
+const DIFF_WORD = /\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu;
 const inlineDiff = (leftLine, rightLine, options = DEFAULT_COMPARE_OPTIONS) => {
     const side = (line) => {
-        const tokens = line.match(WORD) || [];
+        const tokens = line.match(DIFF_WORD) || [];
         let start = 0, end = tokens.length;
         // Ignored spaces at either end never count as a difference
         if (options.leading && end > 0 && /^\s/.test(tokens[0])) start = 1;

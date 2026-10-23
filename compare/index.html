@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
+    <link rel="stylesheet" href="../shared/compare.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-[#1a1a1a] text-gray-200 h-screen flex flex-col overflow-hidden">
@@ -19,8 +20,8 @@
         </a>
 
         <div class="flex items-center gap-1">
-            <button id="prev-btn" class="nav-btn" title="Previous difference (p)" disabled><i class="fa-solid fa-chevron-up"></i></button>
-            <button id="next-btn" class="nav-btn" title="Next difference (n)" disabled><i class="fa-solid fa-chevron-down"></i></button>
+            <button id="prev-btn" class="cmp-nav" title="Previous difference (p)"><i class="fa-solid fa-chevron-up"></i></button>
+            <button id="next-btn" class="cmp-nav" title="Next difference (n)"><i class="fa-solid fa-chevron-down"></i></button>
             <span id="summary" class="ml-2 text-gray-400"></span>
         </div>
 
@@ -29,15 +30,15 @@
         </div>
 
         <div class="flex items-center gap-2 ml-auto">
-            <button id="swap-btn" class="tool-btn" title="Swap left and right"><i class="fa-solid fa-arrow-right-arrow-left"></i> Swap</button>
-            <button id="mode-btn" class="tool-btn primary" title="Ctrl+Enter"></button>
-            <a href="../board-editor/" class="tool-btn" title="Board Editor"><i class="fa-brands fa-trello"></i> Editor</a>
+            <button id="swap-btn" class="cmp-btn" title="Swap left and right"><i class="fa-solid fa-arrow-right-arrow-left"></i> Swap</button>
+            <button id="mode-btn" class="cmp-btn primary" title="Ctrl+Enter"></button>
+            <a href="../board-editor/" class="cmp-btn" title="Board Editor"><i class="fa-brands fa-trello"></i> Editor</a>
         </div>
     </header>
 
-    <div class="pane-heads text-xs">
-        <div class="pane-head" data-side="left"></div>
-        <div class="pane-head" data-side="right"></div>
+    <div class="cmp-heads">
+        <div class="cmp-head" data-side="left"></div>
+        <div class="cmp-head" data-side="right"></div>
     </div>
 
     <main id="main" class="flex-1 min-h-0 flex relative">
@@ -46,16 +47,17 @@
             <textarea id="right-input" class="pane-input" spellcheck="false" wrap="off" placeholder="Paste the other version here, or drop a file on this side. Drop two files to fill both sides."></textarea>
         </div>
         <div id="diff-view" class="hidden flex-1 min-w-0 overflow-y-auto relative">
-            <div id="rows" class="diff"></div>
+            <div id="rows" class="cmp-diff"></div>
         </div>
-        <div id="ruler" class="hidden" title="Differences: red is only on the left, green only on the right"></div>
+        <div id="ruler" class="cmp-ruler hidden" title="Differences: red is only on the left, green only on the right"></div>
         <div id="drop-hint" class="hidden"></div>
     </main>
 
     <input type="file" id="file-left" class="hidden" accept=".md,.markdown,.txt">
     <input type="file" id="file-right" class="hidden" accept=".md,.markdown,.txt">
 
-    <script src="diff.js"></script>
+    <script src="../shared/diff.js"></script>
+    <script src="../shared/compare-view.js"></script>
     <script src="compare.js"></script>
 </body>
 </html>
