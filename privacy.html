@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy - Trello Tools</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <style>
+        :root { --bg: #f9fafb; --text: #111827; --muted: #4b5563; --link: #2563eb; }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg: #111827; --text: #f9fafb; --muted: #9ca3af; --link: #60a5fa; }
+        }
+        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 2rem 1rem; }
+        main { max-width: 40rem; margin: 0 auto; }
+        h1 { font-size: 1.6rem; margin: 0 0 0.25rem; }
+        h2 { font-size: 1.1rem; margin: 1.75rem 0 0.5rem; }
+        p, li { color: var(--muted); line-height: 1.5; }
+        ul { padding-left: 1.25rem; }
+        a { color: var(--link); }
+        .date { font-size: 0.9rem; margin-top: 0; }
+        footer { margin-top: 2rem; font-size: 0.8rem; color: var(--muted); }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Privacy</h1>
+        <p class="date">Last updated October 22, 2026</p>
+        <p>This covers Trello Tools (the Board Editor and the Member Manager), listed in Trello as Boards I/O. In short: the tools run entirely in your browser. There is no server and no account, and these tools do not collect, store, sell, or share your data.</p>
+
+        <h2>What stays in your browser</h2>
+        <ul>
+            <li>Your Trello API key, and the login token Trello gives you when you connect. They are kept in your browser's local storage for this site so you stay connected. Disconnect revokes the token at Trello and removes it; "Forget the saved key" removes the key. Clearing this site's data in your browser removes both.</li>
+            <li>The boards you load and edit. They stay on the page unless you save them to a file or create a board in Trello.</li>
+            <li>There are no cookies, analytics, or tracking.</li>
+        </ul>
+
+        <h2>What goes to Trello</h2>
+        <p>The pages talk to Trello's API directly from your browser, with the access you approve when you connect (read, write, and account). That access is used only for what you ask the tools to do: load boards; create boards, lists, cards, checklists, and attachment links; and list, add, or remove workspace members. Member details shown on the page, such as names, usernames, and emails, are read from Trello when needed and are not saved. Trello's own handling of your data is covered by the <a href="https://www.atlassian.com/legal/privacy-policy">Atlassian Privacy Policy</a>.</p>
+
+        <h2>Other services</h2>
+        <p>Like any website, the pages make ordinary web requests, which include your IP address and browser details:</p>
+        <ul>
+            <li>GitHub Pages hosts the pages.</li>
+            <li>Page styles, icons, the Markdown editor, and fonts load from cdn.tailwindcss.com, cdnjs.cloudflare.com, uicdn.toast.com, and Google Fonts.</li>
+            <li>placehold.co draws placeholder pictures for members without a Trello avatar, and receives their initials to do so.</li>
+            <li>Loading a board from a web address fetches that address from your browser.</li>
+        </ul>
+        <p>Each of these has its own privacy policy. Links to other sites, such as the text compare tools, are visited only if you click them, and anything you paste there is covered by that site's policy.</p>
+
+        <h2>Changes</h2>
+        <p>If this policy changes, this page will be updated with a new date.</p>
+
+        <h2>Contact</h2>
+        <p><a href="https://github.com/veerman">github.com/veerman</a></p>
+
+        <footer>Copyright 2026 Steve Veerman. All rights reserved. <a href="./">Home</a></footer>
+    </main>
+</body>
+</html>
