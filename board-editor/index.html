@@ -28,6 +28,10 @@
             </div>
             
             <div class="flex gap-2 items-center">
+                <button id="copy-link-btn" class="px-3 py-1.5 rounded text-xs font-medium text-gray-200 bg-gray-700 hover:bg-gray-600 border border-gray-600 transition-colors shadow-sm flex items-center gap-2" title="Copy a link to this board and view, to bookmark or share">
+                    <i class="fa-solid fa-link"></i> Copy link
+                </button>
+
                 <div class="relative group">
                     <button class="px-3 py-1.5 rounded text-xs font-medium text-blue-100 bg-blue-900/80 hover:bg-blue-800 border border-blue-800 transition-colors shadow-sm flex items-center gap-2" title="Help Resources">
                         <i class="fa-solid fa-circle-question"></i> Help <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>
@@ -45,31 +49,9 @@
                             <i class="fa-solid fa-comment-dots text-blue-400 w-4 text-center"></i> Query Board Prompt
                         </a>
 
-                        <div class="relative group/compare">
-                            <div class="px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center justify-between cursor-pointer">
-                                <div class="flex items-center gap-2"><i class="fa-solid fa-code-compare text-blue-400 w-4 text-center"></i> Compare Markdown</div>
-                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                            </div>
-                            <div class="absolute right-full top-0 pr-1 hidden group-hover/compare:block w-48 z-50">
-                                <div class="bg-gray-800 border border-gray-700 rounded shadow-xl py-1">
-                                    <a href="#" data-open-compare="original" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50" title="The original on the left, the editor on the right">
-                                        <i class="fa-solid fa-table-columns text-blue-400 w-4 text-center"></i> Side by side
-                                    </a>
-                                    <a href="https://editor.mergely.com/" target="_blank" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50">
-                                        <i class="fa-solid fa-code-merge text-blue-400 w-4 text-center"></i> Mergely
-                                    </a>
-                                    <a href="https://text-compare.com" target="_blank" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50">
-                                        <i class="fa-solid fa-arrow-right-arrow-left text-blue-400 w-4 text-center"></i> Text Compare!
-                                    </a>
-                                    <a href="https://www.textcompare.org" target="_blank" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50">
-                                        <i class="fa-solid fa-magnifying-glass text-blue-400 w-4 text-center"></i> TextCompare.org
-                                    </a>
-                                    <a href="https://www.diffchecker.com" target="_blank" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2">
-                                        <i class="fa-solid fa-not-equal text-blue-400 w-4 text-center"></i> Diffchecker
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+                        <a href="#" data-open-compare class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2" title="Your document side by side with another version">
+                            <i class="fa-solid fa-code-compare text-blue-400 w-4 text-center"></i> Compare Documents
+                        </a>
                     </div>
                 </div>
 
@@ -267,6 +249,7 @@
             </div>
             <input type="file" id="compare-file-input" class="hidden" accept=".txt,.md"/>
             <div class="flex gap-2 ml-auto">
+                <button id="compare-copy-link-btn" class="cmp-btn" title="Copy a link that opens this comparison"><i class="fa-solid fa-link"></i> Copy link</button>
                 <button id="compare-swap-btn" class="cmp-btn" title="Swap left and right"><i class="fa-solid fa-arrow-right-arrow-left"></i> Swap</button>
                 <button id="compare-close-btn" class="cmp-btn" title="Back to the editor (Esc)"><i class="fa-solid fa-xmark"></i> Close</button>
             </div>

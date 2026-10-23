@@ -21,13 +21,22 @@ Help menu:
 - Updates Guide: opens updates-guide.html, the step-by-step process for updating a board.
 - Modify Board Prompt: shows prompt_modify.txt with the Markdown guide filled in, ready to copy into an AI tool along with a chunk of the board and a list of changes.
 - Query Board Prompt: same, with prompt_query.txt, for asking questions about a board without changing it.
-- Compare Markdown: "Side by side" opens Compare with the original (the board check has the same button). Links to external diff sites follow.
+- Compare Documents: opens Compare (below). The board check's "Side by side" opens it with the original.
 
 Compare: the button next to Check covers the window with your document side by side with another version, lined up line by line with changed words marked. Pick the other version at the top: the original, a board from any workspace, a file (or drop one on the page), a Trello board or Markdown link, or pasted text. It stays picked until you choose another, so Compare reopens straight to it with your latest edits. Swap puts your document on the left (for comparing with a newer version), the ignore buttons skip trailing or leading spaces, extra spaces, blank lines, or case, n and p jump between differences, double-clicking a line of your document goes back to the editor with the cursor on it, and Esc closes. The view is ../shared/compare-view.js and the comparison ../shared/diff.js, also used by the standalone page in ../compare/.
 
 The editor fetches trello-markdown-guide.md, prompt_modify.txt, and prompt_query.txt from its own folder, so keep them next to index.html.
 
-URL parameters: `?url=<trello board or markdown url>` loads that board or file on open, `?view=<mode>` picks the starting view, and `?api_key=<key>` saves a shared Trello API key in the browser (then leaves the address).
+Links: the address follows what's open, so it can be bookmarked or shared, and **Copy link** (in the editor and in Compare) copies it. A link holds:
+
+- `?board=<short link>`: the board loaded from Trello (the 8 characters after `trello.com/b/`). It is picked in the workspace and board menus when it is in one of your workspaces. Without a login the page asks you to connect, then comes back to the same link.
+- `?url=<link>`: a Markdown file loaded from the web (a Trello board link becomes `?board=`).
+- `?workspace=<id>`: the workspace picked for Save to Trello.
+- `?view=md-doc`, `doc`, `md-board`, or `board`: the view (Markdown, the default, needs none).
+- `?compare=original`, `?compare=<board short link>`, or `?compare=<link>`: Compare open with that other version, and `&swap=1` when your document is on the left.
+- `?api_key=<key>`: saves a shared Trello API key in the browser, then leaves the address. Copy link never includes it.
+
+Files from your computer and pasted text can't go in a link; Copy link says when it leaves one out. The link holds no login, so whoever opens it sees only boards their own Trello account can see.
 
 Attachments are added as links (`POST cards/{id}/attachments` with `url`). A file uploaded to another board keeps that board's link, so it opens for people who can see that board; linking files from a shared file library instead is planned (KNOWN-ISSUES.md).
 

@@ -746,6 +746,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Login, API key and API calls are shared with the other pages (shared/trello.js)
     let trelloToken = trello.init();
+
+    // The address follows what's open (workspace, board or link, view, Compare), so it can be
+    // bookmarked or shared with Copy link. A value of null takes that part out.
+    const updateAddress = (changes) => {
+        const params = new URLSearchParams(window.location.search);
+        Object.entries(changes).forEach(([key, value]) => (value ? params.set(key, value) : params.delete(key)));
+        const query = params.toString();
+        history.replaceState(null, '', window.location.pathname + (query ? `?${query}` : ''));
+    };
+    // ?view= names for each view; the Markdown view is the default and needs none
+    const VIEW_PARAMS = { markdown: null, split: 'md-doc', wysiwyg: 'doc', 'split-board': 'md-board', preview: 'board' };
+    // True while the editor holds a file from this computer, which a link can't bring along
+    let editorFromFile = false;
     let workspaces = {};
     let statusTimeout;
     let editorAdapter = null;
@@ -985,8 +998,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 editorContainerDom.classList.add('w-full');
                 editorAdapter.setViewMode(mode);
             }
-            
+
             updateViewToggles(btn);
+            updateAddress({ view: VIEW_PARAMS[mode] });
         });
     });
 
@@ -1056,7 +1070,8 @@ document.addEventListener('DOMContentLoaded', () => {
             members.forEach(board => {
                 const orgId = board.idOrganization || 'personal';
                 if (!workspaces[orgId]) workspaces[orgId] = { id: orgId, displayName: board.organization ? board.organization.displayName : 'Personal Boards', boards: [] };
-                workspaces[orgId].boards.push({ id: board.id, name: board.name, url: board.url });
+                const shortLink = board.shortLink || (board.url.match(/\/b\/([a-zA-Z0-9]+)/) || [])[1];
+                workspaces[orgId].boards.push({ id: board.id, name: board.name, url: board.url, shortLink });
             });
             populateWorkspaces();
             refreshBoardsBtn.classList.remove('animate-spin');
@@ -1087,6 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 opt.value = b.id;
                 opt.textContent = b.name;
                 opt.dataset.url = b.url;
+                opt.dataset.shortLink = b.shortLink;
                 boardSelector.appendChild(opt);
             });
             boardSelector.disabled = false;
@@ -1104,19 +1120,22 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             saveToTrelloBtn.disabled = true;
         }
+        updateAddress({ workspace: wsId });
     });
 
     refreshBoardsBtn.addEventListener('click', loadBoards);
 
-    boardSelector.addEventListener('change', async (e) => {
-        const boardId = e.target.value;
+    const loadSelectedBoard = async () => {
+        const boardId = boardSelector.value;
         if (!boardId) {
             boardLinkContainer.classList.add('hidden');
             return;
         }
 
         lastLoadedFilename = null;
-        const option = e.target.options[e.target.selectedIndex];
+        const option = boardSelector.options[boardSelector.selectedIndex];
+        editorFromFile = false;
+        updateAddress({ board: option.dataset.shortLink, url: null });
         const boardUrl = option.dataset.url;
         if (boardUrl) {
             viewBoardLink.href = boardUrl;
@@ -1136,7 +1155,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentFetchId !== activeBoardFetchId) return;
             editorAdapter.setMarkdown("error: " + err.message);
         }
-    });
+    };
+    boardSelector.addEventListener('change', loadSelectedBoard);
+
+    // A board from a link (?board=): picked in the selectors when it is in one of your workspaces,
+    // as if you had picked it yourself; otherwise loaded by its Trello link
+    const openBoardFromLink = async (shortLink) => {
+        const ws = Object.values(workspaces).find(w => w.boards.some(b => b.shortLink === shortLink));
+        if (!ws) {
+            urlInput.value = `https://trello.com/b/${shortLink}`;
+            return loadFromUrl();
+        }
+        workspaceSelector.value = ws.id;
+        workspaceSelector.dispatchEvent(new Event('change'));
+        boardSelector.value = ws.boards.find(b => b.shortLink === shortLink).id;
+        await loadSelectedBoard();
+    };
 
     // Used by the Load from URL button and by ?url= links, which wait for it before applying ?view=
     const loadFromUrl = async () => {
@@ -1159,6 +1193,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const md = await fetchBoardToMarkdown(shortId);
                 editorAdapter.setMarkdown(md);
                 setOriginal(md, `"${boardTitle(md)}" from Trello`);
+                editorFromFile = false;
+                updateAddress({ board: shortId, url: null });
                 saveToFileBtn.disabled = false;
                 if (trelloToken && workspaceSelector.value) saveToTrelloBtn.disabled = false;
                 showStatus("successfully imported trello board from url.");
@@ -1171,6 +1207,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 editorAdapter.setMarkdown(text);
                 // A file loaded after a board is usually the edited version, so keep the board as the original
                 if (originalMarkdown === null) setOriginal(text, url);
+                editorFromFile = false;
+                updateAddress({ url, board: null });
                 saveToFileBtn.disabled = false;
                 if (trelloToken && workspaceSelector.value) saveToTrelloBtn.disabled = false;
                 showStatus("successfully loaded from url.");
@@ -1233,6 +1271,8 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onload = (evt) => {
             editorAdapter.setMarkdown(evt.target.result);
             if (originalMarkdown === null) setOriginal(evt.target.result, file.name);
+            editorFromFile = true;
+            updateAddress({ board: null, url: null });
             if (trelloToken && workspaceSelector.value) saveToTrelloBtn.disabled = false;
             fileInput.value = '';
         };
@@ -1438,7 +1478,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const NO_OTHER_VERSION = 'Pick the other version above: the original, a Trello board, a file, a link, or pasted text. You can also drop a file here.';
 
     // The other version stays picked while the page is open, so Compare opens straight to it next time
-    let compareOther = null;          // { source, label, text }
+    let compareOther = null;          // { source, label, text, ref }: ref is what a link holds (none for files and pasted text)
     let compareYoursOnLeft = false;   // the other version starts on the left, as the older one
     let compareFetchId = 0;
 
@@ -1454,7 +1494,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { onLine: (side, line) => { if (side === (compareYoursOnLeft ? 'left' : 'right')) editLine(line); } });
 
     const originalVersion = () => originalMarkdown === null ? null
-        : { source: 'original', label: `Original: ${originalLabel}`, text: originalMarkdown };
+        : { source: 'original', label: `Original: ${originalLabel}`, text: originalMarkdown, ref: 'original' };
+
+    // ?compare= holds the original, a board's short link, or a link; a file or pasted text can't go in a link
+    const updateCompareAddress = () => {
+        const ref = compareOther && compareOther.ref;
+        updateAddress({ compare: ref, swap: ref && compareYoursOnLeft ? '1' : null });
+    };
 
     const runCompare = (keepPlace = false) => {
         const yours = { label: 'Your document', text: editorAdapter.getMarkdown() };
@@ -1482,6 +1528,7 @@ document.addEventListener('DOMContentLoaded', () => {
         compareOther = other;
         showCompareSource(other.source);
         runCompare();
+        updateCompareAddress();
     };
 
     // Boards and links load from Trello or the web; only the latest pick counts
@@ -1496,19 +1543,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // source: 'original' starts from the original; 'link' when a link is about to pick the other version
     const openCompare = (source = null) => {
         checkModal.classList.add('hidden');
         compareOverlay.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
         // The original can change when another board is loaded, so take it fresh
-        if (source === 'original' || !compareOther || compareOther.source === 'original') compareOther = originalVersion();
+        if (source !== 'link' && (source === 'original' || !compareOther || compareOther.source === 'original')) compareOther = originalVersion();
         showCompareSource(compareOther ? compareOther.source : null);
         runCompare();
+        if (source !== 'link') updateCompareAddress();
     };
 
     const closeCompare = () => {
         compareOverlay.classList.add('hidden');
         document.body.style.overflow = '';
+        updateAddress({ compare: null, swap: null });
     };
 
     // Back to the editor with the cursor on that line, in a view that shows the Markdown
@@ -1531,6 +1581,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('compare-swap-btn').addEventListener('click', () => {
         compareYoursOnLeft = !compareYoursOnLeft;
         runCompare(true);
+        updateCompareAddress();
     });
     window.addEventListener('resize', () => {
         if (!compareOverlay.classList.contains('hidden')) compareHeads.style.marginRight = `${compareView.rightEdge()}px`;
@@ -1539,7 +1590,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const populateCompareBoards = () => {
         const ws = workspaces[compareWorkspace.value];
         compareBoard.innerHTML = '<option value="">-- Board --</option>' + (ws ? ws.boards.slice().sort((a, b) => a.name.localeCompare(b.name))
-            .map(b => `<option value="${escapeHtml(b.id)}">${escapeHtml(b.name)}</option>`).join('') : '');
+            .map(b => `<option value="${escapeHtml(b.shortLink)}">${escapeHtml(b.name)}</option>`).join('') : '');
         compareBoard.disabled = !ws;
     };
 
@@ -1559,19 +1610,38 @@ document.addEventListener('DOMContentLoaded', () => {
         (compareWorkspace.value ? compareBoard : compareWorkspace).focus();
     };
 
+    // name: the board's name when it was picked from the list (otherwise it comes from the board itself)
+    const loadCompareBoard = (shortLink, name = null) => {
+        loadCompareOther('board', 'Loading the board from Trello...', async () => {
+            const md = await fetchBoardToMarkdown(shortLink);
+            return { label: `Board: ${name || boardTitle(md)}`, text: md, ref: shortLink };
+        });
+    };
+
     const loadCompareLink = () => {
         const url = compareLinkInput.value.trim();
         if (!url) return compareLinkInput.focus();
         const boardMatch = url.match(/trello\.com\/b\/([a-zA-Z0-9]+)/);
+        if (boardMatch && trelloToken) return loadCompareBoard(boardMatch[1]);
         loadCompareOther('link', 'Loading...', async () => {
-            if (boardMatch && trelloToken) {
-                const md = await fetchBoardToMarkdown(boardMatch[1]);
-                return { label: `Board: ${boardTitle(md)}`, text: md };
-            }
             const response = await fetch(url);
             if (!response.ok) throw new Error(`http error: ${response.status}`);
-            return { label: url, text: await response.text() };
+            return { label: url, text: await response.text(), ref: url };
         });
+    };
+
+    // Compare from a link (?compare=): the original, a board's short link, or a web address
+    const openCompareFromLink = (ref) => {
+        if (ref === 'original') return openCompare('original');
+        openCompare('link');
+        if (/^https?:\/\//i.test(ref)) {
+            showCompareSource('link');
+            compareLinkInput.value = ref;
+            loadCompareLink();
+        } else if (/^[a-zA-Z0-9]+$/.test(ref)) {
+            if (trelloToken) loadCompareBoard(ref);
+            else compareView.clear('Connect to Trello in the editor first to see the board this link compares with.');
+        }
     };
 
     const usePastedText = () => {
@@ -1602,11 +1672,7 @@ document.addEventListener('DOMContentLoaded', () => {
     compareWorkspace.addEventListener('change', populateCompareBoards);
     compareBoard.addEventListener('change', () => {
         const option = compareBoard.options[compareBoard.selectedIndex];
-        if (!compareBoard.value) return;
-        loadCompareOther('board', 'Loading the board from Trello...', async () => ({
-            label: `Board: ${option.textContent}`,
-            text: await fetchBoardToMarkdown(compareBoard.value)
-        }));
+        if (compareBoard.value) loadCompareBoard(compareBoard.value, option.textContent);
     });
     document.getElementById('compare-link-btn').addEventListener('click', loadCompareLink);
     compareLinkInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadCompareLink(); });
@@ -1629,6 +1695,25 @@ document.addEventListener('DOMContentLoaded', () => {
         setCompareOther({ source: 'file', label: file.name, text: await file.text() });
     });
 
+    // Copy link: the address already follows what's open, so copy it, and say what a link can't carry
+    const copyLink = async (btn, leftOut) => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+        } catch (err) {
+            showStatus("could not copy the link. copy it from the address bar instead.", true);
+            return;
+        }
+        const html = btn.innerHTML;
+        btn.innerHTML = `<i class="fa-solid fa-check"></i> ${leftOut.length ? `Copied, without ${leftOut.join(' or ')}` : 'Copied!'}`;
+        setTimeout(() => btn.innerHTML = html, leftOut.length ? 4000 : 2000);
+    };
+    const editorLeftOut = () => (editorFromFile ? ['your file'] : []);
+    document.getElementById('copy-link-btn').addEventListener('click', (e) => copyLink(e.currentTarget, editorLeftOut()));
+    document.getElementById('compare-copy-link-btn').addEventListener('click', (e) => {
+        const other = compareOther && !compareOther.ref ? [compareOther.source === 'file' ? 'the other file' : 'the pasted text'] : [];
+        copyLink(e.currentTarget, [...editorLeftOut(), ...other]);
+    });
+
     document.addEventListener('keydown', (e) => {
         if (compareOverlay.classList.contains('hidden')) return;
         if (e.key === 'Escape') return closeCompare();
@@ -1642,6 +1727,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const init = async () => {
+        // Read the link first: loading below changes the address
+        const params = new URLSearchParams(window.location.search);
+        const [boardParam, urlParam, workspaceParam, viewParam, compareParam] = ['board', 'url', 'workspace', 'view', 'compare'].map(key => params.get(key));
+
         if (trelloToken) {
             trelloConnectContainer.classList.add('hidden');
             trelloSelectionContainer.classList.remove('hidden');
@@ -1649,34 +1738,33 @@ document.addEventListener('DOMContentLoaded', () => {
             loadMemberInfo();
         }
 
-        // --- Deep Linking / Query Params Logic ---
-        const params = new URLSearchParams(window.location.search);
-        const urlParam = params.get('url');
-        const viewParam = params.get('view');
-
-        // 1. Handle URL Parameter
-        if (urlParam) {
+        // What to open: ?board=<Trello short link>, or ?url=<Trello board link or Markdown file link>.
+        // Without a login the board waits: Connect comes back to this same address.
+        if (boardParam && trelloToken) {
+            await openBoardFromLink(boardParam);
+        } else if (boardParam) {
+            showStatus("connect to trello to open the board in this link.", true, 15000);
+        } else if (urlParam) {
             urlInput.value = urlParam;
             await loadFromUrl();
         }
 
-        // 2. Handle View Parameter
-        if (viewParam) {
-            const viewMap = {
-                'md': 'markdown',
-                'md-doc': 'split',
-                'doc': 'wysiwyg',
-                'md-board': 'split-board',
-                'board': 'preview'
-            };
+        // The workspace picked for Save to Trello, when it isn't the board's own
+        if (workspaceParam && workspaces[workspaceParam] && workspaceSelector.value !== workspaceParam) {
+            workspaceSelector.value = workspaceParam;
+            workspaceSelector.dispatchEvent(new Event('change'));
+        }
 
-            const targetMode = viewMap[viewParam.toLowerCase()];
-            if (targetMode) {
-                const targetBtn = Array.from(viewToggleBtns).find(btn => btn.dataset.mode === targetMode);
-                if (targetBtn) {
-                    targetBtn.click();
-                }
-            }
+        // ?view=md-doc, doc, md-board or board (md, the default, also works)
+        const view = (viewParam || '').toLowerCase();
+        const targetMode = view === 'md' ? 'markdown' : Object.keys(VIEW_PARAMS).find(mode => view && VIEW_PARAMS[mode] === view);
+        if (targetMode) Array.from(viewToggleBtns).find(btn => btn.dataset.mode === targetMode).click();
+
+        // ?compare= opens Compare with the same other version, and ?swap=1 puts your document on the left.
+        // While a board waits for Connect, Compare waits too, so the link survives the login.
+        if (compareParam && !(boardParam && !trelloToken)) {
+            compareYoursOnLeft = params.get('swap') === '1';
+            openCompareFromLink(compareParam);
         }
     };
     init();
