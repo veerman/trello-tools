@@ -38,3 +38,7 @@ Sharing with a team? Send them a link with your key, like `https://you.github.io
 ### Board backup
 
 A Python script you run on your own computer. Copy `.env.example` to `.env`, fill in key and token, choose where the backup and the file store go (see board-backup/README.md), then run `python backup.py`. Standard library only, nothing to install.
+
+## License
+
+Copyright (c) 2026 Steve Veerman. All rights reserved: using, copying, or hosting this code needs written permission. See LICENSE.
