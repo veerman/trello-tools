@@ -27,16 +27,16 @@ Compare: the button next to Check covers the window with your document side by s
 
 The editor fetches trello-markdown-guide.md, prompt_modify.txt, and prompt_query.txt from its own folder, so keep them next to index.html.
 
-Links: the address follows what's open, so it can be bookmarked or shared, and **Copy link** (in the editor and in Compare) copies it. A link holds:
+Links: the address follows what's open, so it can be bookmarked or shared from the address bar. A link holds:
 
 - `?board=<short link>`: the board loaded from Trello (the 8 characters after `trello.com/b/`). It is picked in the workspace and board menus when it is in one of your workspaces. Without a login the page asks you to connect, then comes back to the same link.
 - `?url=<link>`: a Markdown file loaded from the web (a Trello board link becomes `?board=`).
 - `?workspace=<id>`: the workspace picked for Save to Trello.
 - `?view=md-doc`, `doc`, `md-board`, or `board`: the view (Markdown, the default, needs none).
 - `?compare=original`, `?compare=<board short link>`, or `?compare=<link>`: Compare open with that other version, and `&swap=1` when your document is on the left.
-- `?api_key=<key>`: saves a shared Trello API key in the browser, then leaves the address. Copy link never includes it.
+- `?api_key=<key>`: saves a shared Trello API key in the browser, then leaves the address, so the address never shows it.
 
-Files from your computer and pasted text can't go in a link; Copy link says when it leaves one out. The link holds no login, so whoever opens it sees only boards their own Trello account can see.
+Files from your computer and pasted text can't go in a link. The link holds no login, so whoever opens it sees only boards their own Trello account can see.
 
 Attachments are added as links (`POST cards/{id}/attachments` with `url`). A file uploaded to another board keeps that board's link, so it opens for people who can see that board; linking files from a shared file library instead is planned (KNOWN-ISSUES.md).
 

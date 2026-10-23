@@ -748,7 +748,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let trelloToken = trello.init();
 
     // The address follows what's open (workspace, board or link, view, Compare), so it can be
-    // bookmarked or shared with Copy link. A value of null takes that part out.
+    // bookmarked or shared. A value of null takes that part out.
     const updateAddress = (changes) => {
         const params = new URLSearchParams(window.location.search);
         Object.entries(changes).forEach(([key, value]) => (value ? params.set(key, value) : params.delete(key)));
@@ -757,8 +757,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     // ?view= names for each view; the Markdown view is the default and needs none
     const VIEW_PARAMS = { markdown: null, split: 'md-doc', wysiwyg: 'doc', 'split-board': 'md-board', preview: 'board' };
-    // True while the editor holds a file from this computer, which a link can't bring along
-    let editorFromFile = false;
     let workspaces = {};
     let statusTimeout;
     let editorAdapter = null;
@@ -1064,7 +1062,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadBoards = async () => {
         if (!trelloToken) return;
         try {
-            refreshBoardsBtn.classList.add('animate-spin');
+            refreshBoardsBtn.querySelector('i').classList.add('fa-spin');
             const members = await trelloFetch('members/me/boards?organization=true&organization_fields=displayName,url&filter=open');
             workspaces = {};
             members.forEach(board => {
@@ -1074,10 +1072,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 workspaces[orgId].boards.push({ id: board.id, name: board.name, url: board.url, shortLink });
             });
             populateWorkspaces();
-            refreshBoardsBtn.classList.remove('animate-spin');
+            refreshBoardsBtn.querySelector('i').classList.remove('fa-spin');
         } catch (e) {
             showStatus("error loading boards: " + e.message, true);
-            refreshBoardsBtn.classList.remove('animate-spin');
+            refreshBoardsBtn.querySelector('i').classList.remove('fa-spin');
         }
     };
 
@@ -1134,7 +1132,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         lastLoadedFilename = null;
         const option = boardSelector.options[boardSelector.selectedIndex];
-        editorFromFile = false;
         updateAddress({ board: option.dataset.shortLink, url: null });
         const boardUrl = option.dataset.url;
         if (boardUrl) {
@@ -1193,7 +1190,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const md = await fetchBoardToMarkdown(shortId);
                 editorAdapter.setMarkdown(md);
                 setOriginal(md, `"${boardTitle(md)}" from Trello`);
-                editorFromFile = false;
                 updateAddress({ board: shortId, url: null });
                 saveToFileBtn.disabled = false;
                 if (trelloToken && workspaceSelector.value) saveToTrelloBtn.disabled = false;
@@ -1207,7 +1203,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 editorAdapter.setMarkdown(text);
                 // A file loaded after a board is usually the edited version, so keep the board as the original
                 if (originalMarkdown === null) setOriginal(text, url);
-                editorFromFile = false;
                 updateAddress({ url, board: null });
                 saveToFileBtn.disabled = false;
                 if (trelloToken && workspaceSelector.value) saveToTrelloBtn.disabled = false;
@@ -1271,7 +1266,6 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onload = (evt) => {
             editorAdapter.setMarkdown(evt.target.result);
             if (originalMarkdown === null) setOriginal(evt.target.result, file.name);
-            editorFromFile = true;
             updateAddress({ board: null, url: null });
             if (trelloToken && workspaceSelector.value) saveToTrelloBtn.disabled = false;
             fileInput.value = '';
@@ -1693,25 +1687,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!file) return;
         e.preventDefault();
         setCompareOther({ source: 'file', label: file.name, text: await file.text() });
-    });
-
-    // Copy link: the address already follows what's open, so copy it, and say what a link can't carry
-    const copyLink = async (btn, leftOut) => {
-        try {
-            await navigator.clipboard.writeText(window.location.href);
-        } catch (err) {
-            showStatus("could not copy the link. copy it from the address bar instead.", true);
-            return;
-        }
-        const html = btn.innerHTML;
-        btn.innerHTML = `<i class="fa-solid fa-check"></i> ${leftOut.length ? `Copied, without ${leftOut.join(' or ')}` : 'Copied!'}`;
-        setTimeout(() => btn.innerHTML = html, leftOut.length ? 4000 : 2000);
-    };
-    const editorLeftOut = () => (editorFromFile ? ['your file'] : []);
-    document.getElementById('copy-link-btn').addEventListener('click', (e) => copyLink(e.currentTarget, editorLeftOut()));
-    document.getElementById('compare-copy-link-btn').addEventListener('click', (e) => {
-        const other = compareOther && !compareOther.ref ? [compareOther.source === 'file' ? 'the other file' : 'the pasted text'] : [];
-        copyLink(e.currentTarget, [...editorLeftOut(), ...other]);
     });
 
     document.addEventListener('keydown', (e) => {
