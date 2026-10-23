@@ -254,8 +254,10 @@ const renderMarkdownPreview = (textArray) => {
 const buildModalContent = (card, colorMap) => {
     let contentHtml = '';
     
+    // The colour's name next to it, since some colours look alike to many people
     if (card.color && colorMap[card.color]) {
-        contentHtml += `<div class="h-4 w-16 rounded ${colorMap[card.color]} mb-6 shadow-sm"></div>`;
+        contentHtml += `<div class="flex items-center gap-2 mb-6"><div class="h-4 w-16 rounded ${colorMap[card.color]} shadow-sm"></div>`
+            + `<span class="text-xs text-gray-400">${escapeHtml(card.color)}</span></div>`;
     }
     
     if (card.desc && card.desc.length > 0) {
@@ -298,7 +300,7 @@ const buildModalContent = (card, colorMap) => {
 const buildCardTileHtml = (card, colorMap) => {
     let innerHtml = '';
     if (card.color && colorMap[card.color]) {
-        innerHtml += `<div class="h-8 w-full ${colorMap[card.color]} border-b border-gray-700/50"></div>`;
+        innerHtml += `<div class="h-8 w-full ${colorMap[card.color]} border-b border-gray-700/50" title="${escapeHtml(card.color)} cover"></div>`;
     }
 
     innerHtml += `<div class="p-3 pt-2">`;
@@ -1003,8 +1005,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const showStatus = (message, isError = false, duration = 5000) => {
         if (statusTimeout) clearTimeout(statusTimeout);
-        statusMessage.textContent = message;
-        statusMessage.className = `text-center text-xs p-2 rounded font-medium ${isError ? 'bg-red-900/50 text-red-200 border border-red-800' : 'bg-green-900/50 text-green-200 border border-green-800'}`;
+        // An icon as well as the colour, so errors stand out with any colour vision
+        statusMessage.innerHTML = `<i class="fa-solid ${isError ? 'fa-triangle-exclamation' : 'fa-circle-info'} mr-1.5"></i>${escapeHtml(message)}`;
+        statusMessage.className = `text-center text-xs p-2 rounded font-medium ${isError ? 'bg-orange-900/40 text-orange-200 border border-orange-800' : 'bg-teal-900/40 text-teal-200 border border-teal-800'}`;
         statusMessage.classList.remove('hidden');
         statusTimeout = setTimeout(() => statusMessage.classList.add('hidden'), duration);
     };
@@ -1323,6 +1326,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Board check ---
     const checkSummaryBtn = document.getElementById('check-summary-btn');
     const checkSummaryText = document.getElementById('check-summary-text');
+    const checkSummaryIcon = document.getElementById('check-summary-icon');
     const checkModal = document.getElementById('check-modal');
     const checkResults = document.getElementById('check-results');
     const checkOriginalLabel = document.getElementById('check-original-label');
@@ -1339,11 +1343,14 @@ document.addEventListener('DOMContentLoaded', () => {
         lastCheck = checkBoardMarkdown(markdown, originalMarkdown);
         const hasContent = markdown.trim().length > 0;
         checkSummaryText.textContent = hasContent ? summarizeCheck(lastCheck) : 'Check';
-        checkSummaryText.className = !hasContent ? 'text-gray-400'
-            : lastCheck.problems.length ? 'text-red-400'
-            : lastCheck.warnings.length ? 'text-yellow-400'
-            : lastCheck.changes.length ? 'text-blue-300'
-            : 'text-green-400';
+        // Each state has its own icon as well as its colour, so it reads the same with any colour vision
+        const [color, icon] = !hasContent ? ['text-gray-400', 'fa-list-check']
+            : lastCheck.problems.length ? ['text-orange-400', 'fa-circle-exclamation']
+            : lastCheck.warnings.length ? ['text-yellow-300', 'fa-triangle-exclamation']
+            : lastCheck.changes.length ? ['text-blue-300', 'fa-pen-to-square']
+            : ['text-teal-300', 'fa-circle-check'];
+        checkSummaryText.className = color;
+        checkSummaryIcon.className = `fa-solid ${icon} ${color}`;
         return lastCheck;
     };
 
@@ -1355,14 +1362,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderCheckResults = (check) => {
-        const block = (title, items, color) => items.length
-            ? `<div><h3 class="text-xs font-bold uppercase tracking-wide mb-2 ${color}">${title}</h3>
+        const block = (title, items, color, icon) => items.length
+            ? `<div><h3 class="text-xs font-bold uppercase tracking-wide mb-2 ${color}"><i class="fa-solid ${icon} mr-1"></i> ${title}</h3>
                 <ul class="list-disc ml-5 space-y-1 text-gray-300">${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`
             : '';
-        checkResults.innerHTML = block('Problems: fix these before saving', check.problems, 'text-red-400')
-            + block('Warnings: this content would be ignored', check.warnings, 'text-yellow-400')
-            + block('Changes compared with the original', check.changes, 'text-blue-300')
-            || '<p class="text-green-400">No problems found.</p>';
+        checkResults.innerHTML = block('Problems: fix these before saving', check.problems, 'text-orange-400', 'fa-circle-exclamation')
+            + block('Warnings: this content would be ignored', check.warnings, 'text-yellow-300', 'fa-triangle-exclamation')
+            + block('Changes compared with the original', check.changes, 'text-blue-300', 'fa-pen-to-square')
+            || '<p class="text-teal-300"><i class="fa-solid fa-circle-check mr-1"></i> No problems found.</p>';
     };
 
     let checkOpenedForSave = false;
@@ -1485,7 +1492,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const other = await load();
             if (fetchId === compareFetchId) setCompareOther({ source, ...other });
         } catch (err) {
-            if (fetchId === compareFetchId) compareView.clear(`<span class="text-red-400">Could not load it: ${escapeHtml(err.message)}</span>`);
+            if (fetchId === compareFetchId) compareView.clear(`<span class="text-orange-300"><i class="fa-solid fa-triangle-exclamation"></i> Could not load it: ${escapeHtml(err.message)}</span>`);
         }
     };
 

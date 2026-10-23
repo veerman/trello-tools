@@ -100,14 +100,14 @@ class CompareView {
         this.els.prevBtn.disabled = this.els.nextBtn.disabled = n === 0;
         if (!n) {
             this.els.summary.innerHTML = result.identical
-                ? '<span class="text-green-400"><i class="fa-solid fa-check"></i> Identical</span>'
-                : '<span class="text-green-400"><i class="fa-solid fa-check"></i> No differences</span> <span class="text-gray-500">apart from what is ignored</span>';
+                ? '<span class="text-teal-300"><i class="fa-solid fa-circle-check"></i> Identical</span>'
+                : '<span class="text-teal-300"><i class="fa-solid fa-circle-check"></i> No differences</span> <span class="text-gray-500">apart from what is ignored</span>';
             return;
         }
         const { changed, removed, added } = result.counts;
         const count = (value, text, color) => value ? `<span class="${color}">${value} ${text}</span>` : '';
         this.els.summary.innerHTML = `<span class="text-white font-semibold">${current >= 0 ? `${current + 1} of ${n}` : n} difference${n === 1 ? '' : 's'}</span> `
-            + [count(changed, 'changed', 'text-yellow-300'), count(removed, 'only left', 'text-red-300'), count(added, 'only right', 'text-green-300')]
+            + [count(changed, 'changed', 'text-gray-200'), count(removed, 'only left', 'text-orange-300'), count(added, 'only right', 'text-blue-300')]
                 .filter(Boolean).join('<span class="text-gray-600"> · </span>');
     }
 
@@ -115,7 +115,7 @@ class CompareView {
         return this.els.rows.querySelector(`[data-row="${i}"]`);
     }
 
-    // Marks on the ruler: red for lines only on the left, green for lines only on the right
+    // Marks on the ruler: orange for lines only on the left, blue for lines only on the right
     drawRuler() {
         const { result } = this;
         if (!result || !this.els.scroller.offsetHeight) return;

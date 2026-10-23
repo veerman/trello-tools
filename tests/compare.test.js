@@ -59,16 +59,17 @@ test('spaces at the end of a line are ignored by default, and shown when that is
     assert.deepStrictEqual(marked(plain(inlineDiff('- item  ', '- item', { trailing: false })).left), ['  ']);
 });
 
-test('leading spaces count unless ignored', () => {
-    assert.strictEqual(compare(['    text'], ['  text']).blocks.length, 1);
-    assert.strictEqual(compare(['    text'], ['  text'], { leading: true }).blocks.length, 0);
-    assert.deepStrictEqual(marked(plain(inlineDiff('    text', '  text', { ...DEFAULT_COMPARE_OPTIONS, leading: true })).left), []);
+test('leading spaces are ignored by default, and count when that is turned off', () => {
+    assert.strictEqual(compare(['    text'], ['  text']).blocks.length, 0);
+    assert.deepStrictEqual(marked(plain(inlineDiff('    text', '  text')).left), []);
+    assert.strictEqual(compare(['    text'], ['  text'], { leading: false }).blocks.length, 1);
+    assert.deepStrictEqual(marked(plain(inlineDiff('    text', '  text', { ...DEFAULT_COMPARE_OPTIONS, leading: false })).left), ['    ']);
 });
 
 test('extra spaces inside a line can be ignored without ignoring indentation', () => {
     assert.strictEqual(compare(['a  b'], ['a b']).blocks.length, 1);
     assert.strictEqual(compare(['a  b'], ['a b'], { spaces: true }).blocks.length, 0);
-    assert.strictEqual(compare(['    a  b'], ['a b'], { spaces: true }).blocks.length, 1);
+    assert.strictEqual(compare(['    a  b'], ['a b'], { spaces: true, leading: false }).blocks.length, 1);
     assert.deepStrictEqual(marked(plain(inlineDiff('a  b c', 'a b d', { ...DEFAULT_COMPARE_OPTIONS, spaces: true })).left), ['c']);
 });
 

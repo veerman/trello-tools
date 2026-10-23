@@ -108,7 +108,7 @@
                                 <div id="ru-name" class="font-bold text-white text-sm truncate"></div>
                                 <div id="ru-username" class="text-xs text-gray-400 font-mono"></div>
                             </div>
-                            <div class="ml-auto text-green-400"><i class="fa-solid fa-check-circle"></i></div>
+                            <div class="ml-auto text-teal-300"><i class="fa-solid fa-check-circle"></i></div>
                         </div>
                         <button id="execute-btn" class="ml-auto py-2 px-4 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white text-sm font-bold rounded shadow-lg transition-all" disabled>
                             Verify a person first
@@ -201,10 +201,13 @@
 
             // --- HELPERS ---
             const log = (msg, type = 'info') => {
-                const colors = { info: 'text-gray-300', success: 'text-green-400', error: 'text-red-400', warning: 'text-yellow-400' };
+                // An icon as well as the colour, so each kind of line reads the same with any colour vision
+                const colors = { info: 'text-gray-300', success: 'text-teal-300', error: 'text-orange-300', warning: 'text-yellow-300' };
+                const icons = { success: 'fa-check', error: 'fa-circle-exclamation', warning: 'fa-triangle-exclamation' };
                 const line = document.createElement('div');
                 line.className = `mb-1 ${colors[type] || 'text-gray-300'}`;
-                line.innerHTML = `<span class="opacity-50">[${new Date().toLocaleTimeString()}]</span> ${escapeHtml(msg)}`;
+                line.innerHTML = `<span class="opacity-50">[${new Date().toLocaleTimeString()}]</span> `
+                    + (icons[type] ? `<i class="fa-solid ${icons[type]} mr-1"></i>` : '') + escapeHtml(msg);
                 els.console.appendChild(line);
                 els.console.scrollTop = els.console.scrollHeight;
             };
@@ -358,7 +361,11 @@
                 for (const wsId of wsIds) {
                     const ws = workspaces.find(w => w.id === wsId);
                     const row = els.wsList.querySelector(`[data-id="${CSS.escape(wsId)}"]`);
-                    const mark = (color) => { row.className = `ws-row flex items-center gap-3 p-2 rounded border transition-colors ${color}`; };
+                    const mark = (color, icon) => {
+                        row.className = `ws-row flex items-center gap-3 p-2 rounded border transition-colors ${color}`;
+                        row.querySelector('.ws-result')?.remove();
+                        row.insertAdjacentHTML('beforeend', `<i class="ws-result fa-solid ${icon} shrink-0"></i>`);
+                    };
                     try {
                         // The same call also changes an existing member's role, so never send it for
                         // someone already in the workspace (it could turn an admin into a normal member)
@@ -374,12 +381,12 @@
                             log(`[${ws.displayName}] Added.`, 'success');
                             added++;
                         }
-                        mark('border-green-800 bg-green-900/20');
+                        mark('border-teal-700 bg-teal-900/20', 'fa-circle-check text-teal-300');
                         row.querySelector('.ws-checkbox').checked = false;
                     } catch (e) {
                         log(`[${ws.displayName}] Failed: ${e.message}`, 'error');
                         failed++;
-                        mark('border-red-800 bg-red-900/20');
+                        mark('border-orange-700 bg-orange-900/20', 'fa-circle-exclamation text-orange-300');
                     }
                     delete memberIdsCache[wsId];
                     await new Promise(r => setTimeout(r, 200)); // stay well under the rate limit
@@ -422,7 +429,7 @@
                     renderMembersTable();
                 } catch (e) {
                     log('Error loading members: ' + e.message, 'error');
-                    els.membersList.innerHTML = `<div class="text-red-500 p-4 text-center">Error: ${escapeHtml(e.message)}</div>`;
+                    els.membersList.innerHTML = `<div class="text-orange-300 p-4 text-center"><i class="fa-solid fa-circle-exclamation mr-1"></i> Error: ${escapeHtml(e.message)}</div>`;
                 }
             };
 

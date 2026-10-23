@@ -161,7 +161,7 @@
                     <div class="flex items-center gap-3">
                         <h2 class="text-gray-400 font-semibold text-xs pl-2 uppercase tracking-wide">Editor</h2>
                         <button id="check-summary-btn" class="text-[11px] font-medium px-2 py-1 rounded border border-gray-600 hover:bg-gray-700 transition-colors flex items-center gap-1.5" title="Check the board before saving">
-                            <i class="fa-solid fa-list-check text-gray-400"></i> <span id="check-summary-text" class="text-gray-400">Check</span>
+                            <i id="check-summary-icon" class="fa-solid fa-list-check text-gray-400"></i> <span id="check-summary-text" class="text-gray-400">Check</span>
                         </button>
                         <button data-open-compare class="text-[11px] font-medium px-2 py-1 rounded border border-gray-600 hover:bg-gray-700 transition-colors flex items-center gap-1.5 text-gray-400" title="See your document side by side with another version">
                             <i class="fa-solid fa-code-compare"></i> Compare
@@ -289,7 +289,7 @@
             <div id="compare-scroller" class="flex-1 min-w-0 overflow-y-auto relative">
                 <div id="compare-rows" class="cmp-diff"></div>
             </div>
-            <div id="compare-ruler" class="cmp-ruler" title="Differences: red is only on the left, green only on the right"></div>
+            <div id="compare-ruler" class="cmp-ruler" title="Differences: orange is only on the left, blue only on the right"></div>
             <div id="compare-paste" class="hidden absolute inset-0 z-10 bg-[#1a1a1a]">
                 <textarea id="compare-paste-input" class="w-full h-full resize-none bg-transparent text-gray-200 p-3 font-mono text-[13px] leading-5 focus:outline-none" spellcheck="false" placeholder="Paste the other version here. It compares as soon as you paste (or press Ctrl+Enter after typing)."></textarea>
             </div>

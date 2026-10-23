@@ -176,7 +176,7 @@ const trello = {
                             <button data-action="use-token" class="px-3 rounded text-white bg-gray-600 hover:bg-gray-500">Use token</button>
                         </div>
                     </details>
-                    <p data-field="error" class="hidden text-red-400 text-xs"></p>
+                    <p data-field="error" class="hidden text-orange-300 text-xs"></p>
                     <button data-action="forget" class="hidden text-xs text-gray-500 hover:text-gray-300 underline">Forget the saved key</button>
                 </div>
             `;
