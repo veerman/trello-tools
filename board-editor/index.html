@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trello Board Editor</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/3.2.2/toastui-editor.min.css" />
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/3.2.2/theme/toastui-editor-dark.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-6xl mx-auto bg-gray-800 rounded-lg shadow-xl p-6 space-y-6 border border-gray-700">
+        
+        <div class="flex justify-between items-center border-b border-gray-700 pb-4 min-h-[50px]">
+            <div>
+                <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i class="fa-brands fa-trello text-blue-500"></i> Trello Board Editor
+                </h1>
+                <p class="text-[10px] text-gray-400 mt-1 pl-7">export, edit, and recreate trello boards with markdown</p>
+            </div>
+            
+            <div class="flex gap-2 items-center">
+                <div class="relative group">
+                    <button class="px-3 py-1.5 rounded text-xs font-medium text-blue-100 bg-blue-900/80 hover:bg-blue-800 border border-blue-800 transition-colors shadow-sm flex items-center gap-2" title="Help Resources">
+                        <i class="fa-solid fa-circle-question"></i> Help <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>
+                    </button>
+                    <div class="absolute right-0 top-full w-56 bg-gray-800 border border-gray-700 rounded shadow-xl py-1 hidden group-hover:block z-50">
+                        <a href="updates-guide.html" target="_blank" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50">
+                            <i class="fa-solid fa-arrows-rotate text-blue-400 w-4 text-center"></i> Updates Guide
+                        </a>
+                        
+                        <a href="#" id="generate-modify-prompt-btn" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50">
+                            <i class="fa-solid fa-robot text-blue-400 w-4 text-center"></i> Modify Board Prompt
+                        </a>
+
+                        <a href="#" id="generate-query-prompt-btn" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50">
+                            <i class="fa-solid fa-comment-dots text-blue-400 w-4 text-center"></i> Query Board Prompt
+                        </a>
+
+                        <div class="relative group/compare">
+                            <div class="px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center justify-between cursor-pointer">
+                                <div class="flex items-center gap-2"><i class="fa-solid fa-code-compare text-blue-400 w-4 text-center"></i> Compare Markdown</div>
+                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                            </div>
+                            <div class="absolute right-full top-0 pr-1 hidden group-hover/compare:block w-48 z-50">
+                                <div class="bg-gray-800 border border-gray-700 rounded shadow-xl py-1">
+                                    <a href="https://editor.mergely.com/" target="_blank" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50">
+                                        <i class="fa-solid fa-code-merge text-blue-400 w-4 text-center"></i> Mergely
+                                    </a>
+                                    <a href="https://text-compare.com" target="_blank" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50">
+                                        <i class="fa-solid fa-arrow-right-arrow-left text-blue-400 w-4 text-center"></i> Text Compare!
+                                    </a>
+                                    <a href="https://www.textcompare.org" target="_blank" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50">
+                                        <i class="fa-solid fa-magnifying-glass text-blue-400 w-4 text-center"></i> TextCompare.org
+                                    </a>
+                                    <a href="https://www.diffchecker.com" target="_blank" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2">
+                                        <i class="fa-solid fa-not-equal text-blue-400 w-4 text-center"></i> Diffchecker
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="../member-tools/" class="px-3 py-1.5 rounded text-xs font-medium text-gray-200 bg-gray-700 hover:bg-gray-600 border border-gray-600 transition-colors shadow-sm flex items-center gap-2" title="Member Manager">
+                    <i class="fa-solid fa-users-gear"></i> Members
+                </a>
+
+                <button id="logout-btn" class="hidden px-3 py-1.5 rounded text-xs font-medium text-red-100 bg-red-900/80 hover:bg-red-800 border border-red-800 transition-colors shadow-sm flex items-center gap-2" title="Disconnect">
+                    <i class="fa-solid fa-power-off"></i> Disconnect
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div id="trello-controls" class="space-y-4 p-4 border border-blue-900/40 rounded bg-blue-900/5 flex flex-col h-full">
+                <h2 class="text-sm font-semibold text-blue-400 uppercase tracking-wide">Trello Operations</h2>
+                
+                <div id="trello-connect-container" class="flex-1 flex items-center">
+                     <button id="connect-trello-btn" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-lg">
+                        Connect to Trello
+                    </button>
+                </div>
+
+                <div id="trello-selection-container" class="hidden flex flex-col h-full">
+                    
+                    <div class="space-y-2 pt-2">
+                        <div class="flex gap-2 items-center">
+                            <select id="workspace-selector" class="flex-1 h-[38px] bg-gray-700 border border-gray-600 text-white rounded text-xs px-2 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                                <option value="">-- Load Workspace --</option>
+                            </select>
+                            <button id="refresh-boards-btn" class="text-gray-400 hover:text-blue-400 w-[38px] h-[38px] shrink-0 flex items-center justify-center bg-gray-700 rounded border border-gray-600 transition-colors" title="Refresh Boards">
+                                <i class="fa-solid fa-sync"></i>
+                            </button>
+                        </div>
+                        <select id="board-selector" class="w-full h-[38px] bg-gray-700 border border-gray-600 text-white rounded text-xs px-2 focus:ring-1 focus:ring-blue-500 focus:outline-none" disabled>
+                            <option value="">-- Load Board --</option>
+                        </select>
+                        
+                        <div id="board-link-container" class="hidden pt-2">
+                            <a id="view-board-link" href="#" target="_blank" class="w-full h-[38px] flex items-center justify-center gap-2 rounded text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 transition-colors shadow-sm">
+                                View on Trello <i class="fa-solid fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 min-h-[20px] border-b border-blue-900/30 mb-4 mt-4"></div>
+
+                    <div class="flex gap-2 items-start">
+                        <button id="save-to-trello-btn" class="w-full h-[38px] flex items-center justify-center gap-2 rounded text-sm font-medium text-white bg-green-700 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md" disabled>
+                            Save to Trello <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4 p-4 border border-gray-700 rounded bg-gray-700/20 flex flex-col h-full">
+                <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">File Operations</h2>
+                
+                <div class="flex flex-col h-full">
+                    <div class="pt-2 space-y-2">
+                        <label for="file-input" class="w-full h-[38px] cursor-pointer flex items-center justify-center gap-2 border border-gray-600 border-dashed hover:border-blue-500 rounded text-sm font-medium bg-gray-700/50 hover:bg-gray-700 text-white transition-colors">
+                             Load from File <i class="fa-solid fa-folder-open text-gray-400"></i>
+                        </label>
+                        <input type="file" id="file-input" class="hidden" accept=".txt,.md"/>
+
+                        <div class="flex gap-2">
+                            <input type="text" id="url-input" placeholder="Load from URL" class="flex-1 h-[38px] bg-gray-700 border border-gray-600 rounded text-xs px-3 text-white focus:ring-1 focus:ring-blue-500 focus:outline-none placeholder-gray-500">
+                            <button id="load-url-btn" class="w-[38px] h-[38px] shrink-0 flex items-center justify-center bg-gray-600 hover:bg-gray-500 border border-gray-600 text-white rounded text-xs font-medium transition-colors" title="Load from URL">
+                                <i class="fa-solid fa-cloud-arrow-down"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 min-h-[20px] border-b border-gray-600/50 mb-4 mt-4"></div>
+
+                    <button id="save-to-file-btn" class="w-full h-[38px] flex items-center justify-center gap-2 rounded text-sm font-medium text-white bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md" disabled>
+                        Save to File <i class="fa-solid fa-file-arrow-down"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="status-message" class="text-center text-xs p-2 rounded hidden transition-all"></div>
+
+        <div id="content-display-section" class="mt-6">
+            <div class="border border-gray-600 rounded overflow-hidden bg-[#202020]">
+                <div class="flex justify-between items-center p-2 bg-[#1a1a1a] border-b border-gray-600">
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-gray-400 font-semibold text-xs pl-2 uppercase tracking-wide">Editor</h2>
+                        <button id="check-summary-btn" class="text-[11px] font-medium px-2 py-1 rounded border border-gray-600 hover:bg-gray-700 transition-colors flex items-center gap-1.5" title="Check the board before saving">
+                            <i class="fa-solid fa-list-check text-gray-400"></i> <span id="check-summary-text" class="text-gray-400">Check</span>
+                        </button>
+                    </div>
+
+                    <div class="flex bg-gray-700 rounded p-0.5 space-x-0.5" id="view-toggle-group">
+                        <button class="view-toggle-btn text-[10px] uppercase font-bold px-3 py-1 rounded transition-colors bg-blue-600 text-white" data-mode="markdown">Markdown</button>
+                        <button class="view-toggle-btn text-[10px] uppercase font-bold px-3 py-1 rounded transition-colors text-gray-400 hover:bg-gray-600 hover:text-white" data-mode="split">MD/Doc</button>
+                        <button class="view-toggle-btn text-[10px] uppercase font-bold px-3 py-1 rounded transition-colors text-gray-400 hover:bg-gray-600 hover:text-white" data-mode="wysiwyg">Doc</button>
+                        <button class="view-toggle-btn text-[10px] uppercase font-bold px-3 py-1 rounded transition-colors text-gray-400 hover:bg-gray-600 hover:text-white" data-mode="split-board">MD/Board</button>
+                        <button class="view-toggle-btn text-[10px] uppercase font-bold px-3 py-1 rounded transition-colors text-gray-400 hover:bg-gray-600 hover:text-white" data-mode="preview">Board</button>
+                    </div>
+                </div>
+                <div class="flex w-full">
+                    <div id="editor-container" class="w-full"></div>
+                    <div id="board-preview-container" class="hidden overflow-x-auto p-4 bg-blue-900/10 min-h-[600px] flex gap-4 items-start items-stretch w-full border-l border-gray-600"></div>
+                </div>
+                <textarea id="hidden-board-content" class="hidden"></textarea>
+            </div>
+        </div>
+
+    </div>
+    
+    <div id="card-modal" class="hidden fixed inset-0 bg-black/70 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-gray-600 shadow-2xl relative">
+            <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors bg-gray-700 hover:bg-gray-600 rounded-full w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            <div class="p-6 overflow-y-auto w-full">
+                <h2 id="modal-title" class="text-xl font-bold text-white mb-6 pr-8 leading-snug"></h2>
+                <div id="modal-content" class="text-gray-300 text-sm space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="prompt-modal" class="hidden fixed inset-0 bg-black/70 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-gray-800 rounded-xl max-w-3xl w-full flex flex-col border border-gray-600 shadow-2xl overflow-hidden relative">
+            <div class="flex justify-between items-center p-4 border-b border-gray-700 bg-gray-900">
+                <h2 id="prompt-modal-title" class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-robot text-blue-500"></i> Modify Board Prompt</h2>
+                <button id="close-prompt-modal-btn" class="text-gray-400 hover:text-white transition-colors bg-gray-700 hover:bg-gray-600 rounded-full w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4 flex flex-col flex-1">
+                <p class="text-xs text-gray-400 mb-3">Copy this compiled prompt and paste it into your AI assistant, followed by your board Markdown and your requested changes.</p>
+                <textarea id="prompt-textarea" class="w-full h-96 bg-[#1a1a1a] border border-gray-700 rounded p-4 text-sm text-gray-300 focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono resize-none shadow-inner" readonly></textarea>
+            </div>
+            <div class="p-4 border-t border-gray-700 bg-gray-900 flex justify-end">
+                <button id="copy-prompt-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded transition-colors flex items-center gap-2 shadow-sm">
+                    <i class="fa-regular fa-copy"></i> Copy to Clipboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="check-modal" class="hidden fixed inset-0 bg-black/70 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-gray-800 rounded-xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-gray-600 shadow-2xl overflow-hidden relative">
+            <div class="flex justify-between items-center p-4 border-b border-gray-700 bg-gray-900">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-list-check text-blue-500"></i> Board Check</h2>
+                <button id="close-check-modal-btn" class="text-gray-400 hover:text-white transition-colors bg-gray-700 hover:bg-gray-600 rounded-full w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-1 space-y-4 text-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
+                    <span>Comparing with: <span id="check-original-label" class="text-gray-200">nothing yet (load a board or file first)</span></span>
+                    <label for="check-original-input" class="cursor-pointer text-blue-400 hover:underline">Use a different original...</label>
+                    <input type="file" id="check-original-input" class="hidden" accept=".txt,.md"/>
+                </div>
+                <div id="check-results" class="space-y-4"></div>
+                <p class="text-xs text-gray-500">Tip: copy the report and paste it into your AI tool along with the board Markdown to have it fix the problems.</p>
+            </div>
+            <div class="p-4 border-t border-gray-700 bg-gray-900 flex justify-end gap-2">
+                <button id="copy-check-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium rounded transition-colors flex items-center gap-2 shadow-sm">
+                    <i class="fa-regular fa-copy"></i> Copy report
+                </button>
+                <button id="continue-save-btn" class="hidden px-4 py-2 bg-green-700 hover:bg-green-600 text-white text-sm font-medium rounded transition-colors flex items-center gap-2 shadow-sm">
+                    Continue to Save <i class="fa-solid fa-cloud-arrow-up"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://uicdn.toast.com/editor/3.2.2/toastui-editor-all.min.js"></script>
+    
+    <script src="../shared/trello.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

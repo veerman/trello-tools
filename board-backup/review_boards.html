@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Board Review</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 min-h-screen p-4 md:p-8">
+
+    <div class="w-full max-w-6xl mx-auto bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-700">
+
+        <div class="border-b border-gray-700 pb-4 mb-4 flex flex-wrap justify-between items-start gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fa-solid fa-clipboard-check text-blue-500"></i> Board Review
+                </h1>
+                <p class="text-xs text-gray-400 mt-1 pl-9">Choose which boards the backup keeps. Only In boards are backed up and copied to Drive; boards not reviewed stay out. Every click is saved.</p>
+            </div>
+            <span id="save-status" class="text-xs text-gray-400 py-2" aria-live="polite"></span>
+        </div>
+
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div id="filters" class="flex flex-wrap gap-2"></div>
+            <div class="flex flex-wrap items-center gap-3">
+                <input id="search" type="search" placeholder="Search boards, people, files" class="bg-gray-900 border border-gray-600 rounded py-1.5 px-3 text-xs text-gray-200 outline-none focus:border-blue-500 w-64 max-w-full">
+                <div class="flex items-center gap-2">
+                    <label for="sort" class="text-[11px] text-gray-400 uppercase font-semibold">Sort By</label>
+                    <select id="sort" class="bg-gray-800 border border-gray-600 rounded py-1 px-2 text-xs text-gray-200 outline-none focus:border-blue-500">
+                        <option value="name">Name</option>
+                        <option value="activity">Last activity</option>
+                        <option value="created">Created</option>
+                        <option value="members">Fewest members</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div id="boards" class="space-y-3"><p class="text-sm text-gray-400">Loading boards...</p></div>
+
+        <p class="text-xs text-gray-500 mt-6">When you're done, close this tab and press Ctrl+C in the terminal. You can run the review again any time; it remembers your choices.</p>
+    </div>
+
+<script>
+    // Names come from Trello, so they are escaped before they go into innerHTML (as in shared/trello.js)
+    const escapeHtml = (text) => String(text ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const trelloUrl = (url) => /^https:\/\/trello\.com\//.test(url || '') ? url : '#';
+
+    const FILTERS = [
+        { key: 'all', label: 'All', test: () => true },
+        { key: 'unreviewed', label: 'Not reviewed', test: (b) => !b.choice },
+        { key: 'in', label: 'In', test: (b) => b.choice === 'in' },
+        { key: 'out', label: 'Out', test: (b) => b.choice === 'out' },
+        { key: 'flagged', label: 'Flagged', test: (b) => b.flags.length > 0 },
+    ];
+    const SORTS = {
+        name: (a, b) => a.name.localeCompare(b.name),
+        activity: (a, b) => b.last_activity.localeCompare(a.last_activity),
+        created: (a, b) => b.created.localeCompare(a.created),
+        members: (a, b) => a.members.length - b.members.length || a.name.localeCompare(b.name),
+    };
+    const VISIBILITY = { private: 'Private (members only)', org: 'Workspace can see it', public: 'Public', enterprise: 'Enterprise can see it' };
+
+    let boards = [];
+    let filter = 'all';
+
+    function formatBytes(bytes) {
+        if (!+bytes) return '';
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), sizes.length - 1);
+        return `${(bytes / 1024 ** i).toFixed(i ? 1 : 0)} ${sizes[i]}`;
+    }
+
+    function searchText(b) {
+        return [b.name, b.made_by, ...b.members.map(m => m.name), ...b.lists, ...b.files.map(f => f.name)].join('\n').toLowerCase();
+    }
+
+    function renderFilters() {
+        document.getElementById('filters').innerHTML = FILTERS.map(f => {
+            const count = boards.filter(f.test).length;
+            const active = f.key === filter;
+            return `<button data-filter="${f.key}" class="text-xs font-medium py-1.5 px-3 rounded border transition-colors ${active ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-700'}">${f.label} <span class="opacity-70">${count}</span></button>`;
+        }).join('');
+    }
+
+    function choiceButton(b, choice) {
+        const on = b.choice === choice;
+        const colors = choice === 'in'
+            ? (on ? 'bg-green-600 border-green-500 text-white' : 'border-gray-600 text-gray-300 hover:border-green-500')
+            : (on ? 'bg-red-600 border-red-500 text-white' : 'border-gray-600 text-gray-300 hover:border-red-500');
+        const title = on ? 'Click again to mark as not reviewed' : (choice === 'in' ? 'Keep this board in the backup' : 'Leave this board out');
+        return `<button data-id="${escapeHtml(b.id)}" data-choice="${choice}" title="${title}" class="text-xs font-semibold py-1.5 px-4 rounded border transition-colors ${colors}">${choice === 'in' ? 'In' : 'Out'}</button>`;
+    }
+
+    function fileRow(f) {
+        const hint = f.hint === 'email' ? '<span class="text-amber-400">email</span>' : f.hint === 'personal' ? '<span class="text-amber-400">personal?</span>' : '';
+        const details = [formatBytes(f.size), f.date, hint].filter(Boolean).join(' · ');
+        return `<li class="flex justify-between gap-4 py-0.5 ${f.hint ? 'text-amber-200' : ''}"><span class="break-all">${escapeHtml(f.name)}</span><span class="text-gray-500 shrink-0">${details}</span></li>`;
+    }
+
+    function boardCard(b) {
+        const badges = [
+            b.roadmap ? '<span class="text-[11px] py-0.5 px-2 rounded bg-blue-900/60 text-blue-300 border border-blue-800">Roadmap</span>' : '',
+            ...b.flags.map(flag => `<span class="text-[11px] py-0.5 px-2 rounded bg-amber-900/40 text-amber-300 border border-amber-800"><i class="fa-solid fa-triangle-exclamation mr-1"></i>${escapeHtml(flag)}</span>`),
+        ].join(' ');
+        const meta = [
+            `Made by ${escapeHtml(b.made_by)}`, `Created ${b.created}`, `Last activity ${escapeHtml(b.last_activity)}`,
+            escapeHtml(VISIBILITY[b.visibility] || b.visibility), `You: ${escapeHtml(b.your_role)}`,
+        ].join(' · ');
+        const members = b.members.map(m => escapeHtml(m.name) + (m.role === 'normal' ? '' : ` <span class="text-gray-500">(${escapeHtml(m.role)})</span>`)).join(', ');
+        const lists = b.lists.slice(0, 8).map(escapeHtml).join(', ') + (b.lists.length > 8 ? `, and ${b.lists.length - 8} more` : '');
+        const border = b.choice === 'in' ? 'border-green-800' : b.choice === 'out' ? 'border-red-900' : 'border-gray-700';
+        return `
+        <div class="rounded border ${border} bg-gray-900/40 p-4">
+            <div class="flex flex-wrap justify-between gap-3">
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <a href="${escapeHtml(trelloUrl(b.url))}" target="_blank" rel="noopener" class="text-white font-semibold hover:text-blue-400">${escapeHtml(b.name)}</a>
+                        ${badges}
+                    </div>
+                    <div class="text-xs text-gray-400 mt-1">${meta}</div>
+                    <div class="text-xs text-gray-400 mt-1">${b.members.length} member${b.members.length === 1 ? '' : 's'}: ${members || 'none'}</div>
+                    ${b.lists.length ? `<div class="text-xs text-gray-500 mt-1">Lists: ${lists}</div>` : ''}
+                </div>
+                <div class="flex gap-2 shrink-0 items-start">${choiceButton(b, 'in')}${choiceButton(b, 'out')}</div>
+            </div>
+            <details class="mt-2 text-xs text-gray-300">
+                <summary class="cursor-pointer text-gray-400 hover:text-gray-200">${b.files.length} file${b.files.length === 1 ? '' : 's'}, ${b.links} link${b.links === 1 ? '' : 's'}, ${b.cards} card${b.cards === 1 ? '' : 's'}</summary>
+                ${b.files.length ? `<ul class="mt-2 pl-4 border-l border-gray-700">${b.files.map(fileRow).join('')}</ul>` : ''}
+            </details>
+        </div>`;
+    }
+
+    function render() {
+        renderFilters();
+        const query = document.getElementById('search').value.trim().toLowerCase();
+        const test = FILTERS.find(f => f.key === filter).test;
+        const shown = boards.filter(b => test(b) && (!query || searchText(b).includes(query)))
+            .sort(SORTS[document.getElementById('sort').value]);
+        document.getElementById('boards').innerHTML = shown.length
+            ? shown.map(boardCard).join('')
+            : '<p class="text-sm text-gray-400">No boards here.</p>';
+    }
+
+    async function choose(id, choice) {
+        const board = boards.find(b => b.id === id);
+        const previous = board.choice;
+        board.choice = board.choice === choice ? null : choice;
+        render();
+        const status = document.getElementById('save-status');
+        try {
+            const response = await fetch('choice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, choice: board.choice }) });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            status.textContent = `Saved: ${board.name} is ${board.choice === 'in' ? 'In' : board.choice === 'out' ? 'Out' : 'not reviewed'}`;
+            status.className = 'text-xs text-green-400 py-2';
+        } catch (error) {
+            board.choice = previous;
+            render();
+            status.textContent = "Not saved: is review_boards.py still running in the terminal?";
+            status.className = 'text-xs text-red-400 py-2';
+        }
+    }
+
+    document.getElementById('filters').addEventListener('click', (e) => {
+        const button = e.target.closest('[data-filter]');
+        if (button) { filter = button.dataset.filter; render(); }
+    });
+    document.getElementById('boards').addEventListener('click', (e) => {
+        const button = e.target.closest('[data-choice]');
+        if (button) choose(button.dataset.id, button.dataset.choice);
+    });
+    document.getElementById('search').addEventListener('input', render);
+    document.getElementById('sort').addEventListener('change', render);
+
+    fetch('boards')
+        .then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); })
+        .then(data => { boards = data; render(); })
+        .catch(() => {
+            document.getElementById('boards').innerHTML = '<p class="text-sm text-red-400">Could not load the boards. Start the page with: python review_boards.py</p>';
+        });
+</script>
+</body>
+</html>

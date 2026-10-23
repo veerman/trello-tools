@@ -1,0 +1,46 @@
+{
+  "name": "Sample Board",
+  "id": "65a1b2c3d4e5f6a7b8c9d0e1",
+  "shortUrl": "https://trello.com/b/AbCd1234",
+  "dateLastActivity": "2026-01-03T09:00:00.000Z",
+  "organization": {"displayName": "Sample Workspace"},
+  "lists": [
+    {"id": "L1", "name": "Week 1", "pos": 1000, "closed": false},
+    {"id": "L2", "name": "Old stuff", "pos": 1500, "closed": true},
+    {"id": "L3", "name": "Week 2", "pos": 2000, "closed": false},
+    {"id": "L4", "name": "Empty list", "pos": 3000, "closed": false}
+  ],
+  "cards": [
+    {"id": "C1", "idList": "L1", "pos": 2, "closed": false, "name": "Kickoff:", "cover": {"color": "green"},
+     "desc": "Welcome!\r\n\r\n\r\nRead the plan.", "attachments": []},
+    {"id": "C2", "idList": "L1", "pos": 1, "closed": false, "name": "Priority [red]", "cover": {"color": null},
+     "desc": "", "attachments": []},
+    {"id": "C3", "idList": "L1", "pos": 3, "closed": true, "name": "Archived card", "cover": {"color": null},
+     "desc": "Should not come back.", "attachments": []},
+    {"id": "C4", "idList": "L2", "pos": 1, "closed": false, "name": "Card in archived list", "cover": {"color": "red"},
+     "desc": "Should not come back either.", "attachments": []},
+    {"id": "C5", "idList": "L3", "pos": 1, "closed": false, "name": "Research", "cover": {"color": "sky"},
+     "desc": "# Goal\n\nFind three experts.\n\n1. Draft list\n\n2. Send emails\n\nSee [guide](https://example.com/guide \"smartCard-inline\")",
+     "attachments": [
+       {"id": "A1", "name": "Plan [v2].docx", "url": "https://trello.com/1/cards/C5/attachments/A1/download/Plan_v2.docx", "isUpload": true},
+       {"id": "A2", "name": "Site (beta)", "url": "https://example.com/page_(beta)", "isUpload": false}
+     ]}
+  ],
+  "checklists": [
+    {"id": "K1", "idCard": "C5", "pos": 1, "name": "Tasks", "checkItems": [
+      {"name": "Write notes", "pos": 2, "state": "incomplete"},
+      {"name": "Book call", "pos": 1, "state": "complete"}
+    ]},
+    {"id": "K2", "idCard": "C3", "pos": 1, "name": "Old tasks", "checkItems": [
+      {"name": "Gone", "pos": 1, "state": "incomplete"}
+    ]}
+  ],
+  "actions": [
+    {"type": "commentCard", "date": "2026-01-03T09:00:00.000Z",
+     "memberCreator": {"fullName": "Sam Lee", "username": "samlee"},
+     "data": {"card": {"id": "C5"}, "text": "Second comment\n\n## Not a heading"}},
+    {"type": "commentCard", "date": "2026-01-02T10:00:00.000Z",
+     "memberCreator": {"fullName": "Alex Kim", "username": "alexkim"},
+     "data": {"card": {"id": "C5"}, "text": "Looks good"}}
+  ]
+}

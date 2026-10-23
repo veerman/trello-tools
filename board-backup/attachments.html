@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attachment Manager</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 min-h-screen p-4 md:p-8">
+
+    <div class="w-full max-w-7xl mx-auto bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-700">
+
+        <div class="border-b border-gray-700 pb-4 mb-4 flex flex-wrap justify-between items-start gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fa-solid fa-paperclip text-blue-500"></i> Attachment Manager
+                </h1>
+                <p class="text-xs text-gray-400 mt-1 pl-9">Every stored file and link across your backed-up boards: where each one is used, and which boards share it</p>
+            </div>
+            <label class="cursor-pointer flex items-center gap-2 py-2 px-3 border border-gray-600 border-dashed hover:border-blue-500 rounded text-xs font-medium bg-gray-700/50 hover:bg-gray-700 text-white transition-colors" title="For when this page can't load it from the backup folder by itself">
+                Open attachments.json <i class="fa-solid fa-folder-open text-gray-400"></i>
+                <input type="file" id="index-input" class="hidden" accept=".json">
+            </label>
+        </div>
+
+        <div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="flex items-center gap-4 bg-gray-900/50 p-2 border border-gray-700 rounded w-fit">
+                    <div class="flex items-center gap-2">
+                        <label class="text-[11px] text-gray-400 uppercase font-semibold">Sort By</label>
+                        <select id="sortField" class="bg-gray-800 border border-gray-600 rounded py-1 px-2 text-xs text-gray-200 outline-none focus:border-blue-500 transition-colors">
+                            <option value="uses">Uses</option>
+                            <option value="name">Name</option>
+                            <option value="size">File Size</option>
+                            <option value="date">First Uploaded</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-[11px] text-gray-400 uppercase font-semibold">Order</label>
+                        <select id="sortDir" class="bg-gray-800 border border-gray-600 rounded py-1 px-2 text-xs text-gray-200 outline-none focus:border-blue-500 transition-colors">
+                            <option value="desc">Descending</option>
+                            <option value="asc">Ascending</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 bg-gray-900/50 p-2 border border-gray-700 rounded w-fit h-full">
+                    <span class="text-[11px] text-gray-400 uppercase font-semibold">Include</span>
+                    <div class="flex items-center gap-3">
+                        <label class="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer hover:text-white transition-colors select-none">
+                            <input type="checkbox" id="includeFiles" checked class="w-3.5 h-3.5 accent-blue-500 cursor-pointer"> Files
+                        </label>
+                        <label class="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer hover:text-white transition-colors select-none">
+                            <input type="checkbox" id="includeLinks" checked class="w-3.5 h-3.5 accent-blue-500 cursor-pointer"> Links
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-end gap-2 shrink-0">
+                <div class="text-[11px] text-gray-400 flex items-center gap-2 bg-blue-900/10 border border-blue-900/30 p-2 rounded w-fit">
+                    <i class="fa-solid fa-circle-info text-blue-500"></i>
+                    <span>Search with <strong class="text-gray-300">OR</strong> or <strong class="text-gray-300">|</strong>, and <strong class="text-gray-300">NOT</strong> or <strong class="text-gray-300">-</strong>. Spaces mean <strong class="text-gray-300">AND</strong>.</span>
+                </div>
+                <div id="resultStats" class="text-[10px] text-gray-500 font-mono tracking-tight mr-1"></div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto border border-gray-700 rounded-lg bg-gray-800 shadow-sm">
+            <table class="w-full text-left text-xs table-fixed">
+                <thead class="bg-gray-900 border-b border-gray-700">
+                    <tr class="text-gray-400 uppercase text-[11px] font-semibold tracking-wider">
+                        <th class="pt-4 pb-2 px-2 w-[6%] text-center">Uses</th>
+                        <th class="pt-4 pb-2 px-3 w-[25%] border-l border-gray-700/50">File or Link</th>
+                        <th class="pt-4 pb-2 px-3 w-[23%] border-l border-gray-700/50">Board</th>
+                        <th class="pt-4 pb-2 px-3 w-[23%] border-l border-gray-700/50">List</th>
+                        <th class="pt-4 pb-2 px-3 w-[23%] border-l border-gray-700/50">Card</th>
+                    </tr>
+                    <tr class="border-t border-gray-800/50">
+                        <th class="pb-3 pt-1 px-2 align-top">
+                            <input type="text" id="filterUses" placeholder=">= 2" class="w-full bg-gray-900 border border-gray-700 rounded py-1.5 px-1 text-[11px] text-gray-200 focus:ring-1 focus:ring-blue-500 outline-none placeholder-gray-600 font-normal normal-case text-center">
+                        </th>
+                        <th class="pb-3 pt-1 px-3 border-l border-gray-700/50 align-top">
+                            <input type="text" id="filterName" placeholder="Filter names or sites..." class="w-full bg-gray-900 border border-gray-700 rounded py-1.5 px-3 text-xs text-gray-200 focus:ring-1 focus:ring-blue-500 outline-none placeholder-gray-600 font-normal normal-case">
+                        </th>
+                        <th class="pb-3 pt-1 px-3 border-l border-gray-700/50 align-top">
+                            <input type="text" id="filterBoard" placeholder="Filter boards..." class="w-full bg-gray-900 border border-gray-700 rounded py-1.5 px-3 text-xs text-gray-200 focus:ring-1 focus:ring-blue-500 outline-none placeholder-gray-600 font-normal normal-case">
+                        </th>
+                        <th class="pb-3 pt-1 px-3 border-l border-gray-700/50 align-top" colspan="2">
+                            <input type="text" id="filterPath" placeholder="Filter lists and cards..." class="w-full bg-gray-900 border border-gray-700 rounded py-1.5 px-3 text-xs text-gray-200 focus:ring-1 focus:ring-blue-500 outline-none placeholder-gray-600 font-normal normal-case">
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="divide-y divide-gray-700/50">
+                    <tr><td colspan="5" class="py-8 text-center text-gray-500"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading attachments.json...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    // Where the backup's attachments.json and the file store are, relative to this page.
+    // The defaults match the backup's default folders; override with ?data=...&files=...
+    const params = new URLSearchParams(window.location.search);
+    const DATA_URL = (params.get('data') ?? 'backup').replace(/\/+$/, '');
+    const FILES_URL = (params.get('files') ?? `${DATA_URL}/files`).replace(/\/+$/, '');
+    const FILTER_IDS = { board: 'filterBoard', name: 'filterName', path: 'filterPath', uses: 'filterUses', sort: 'sortField', dir: 'sortDir' };
+
+    let groups = [];
+
+    // Names come from Trello, so they are escaped before they go into innerHTML (as in shared/trello.js)
+    const escapeHtml = (text) => String(text ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+    // Only web, mail and relative links survive (as in the editor)
+    const safeUrl = (url) => {
+        const value = String(url ?? '').trim();
+        const compact = value.replace(/[\u0000- \u007f]/g, '');
+        const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(compact);
+        return !hasScheme || /^(https?|mailto):/i.test(compact) ? value : '#';
+    };
+
+    const inFolder = (folder, name) => (folder ? `${folder}/` : '') + encodeURIComponent(name);
+
+    // A Trello id starts with its creation time in seconds, as 8 hex digits
+    const createdFromId = (id) => /^[0-9a-f]{24}$/.test(id || '') ? parseInt(id.slice(0, 8), 16) : 0;
+
+    function formatBytes(bytes, decimals = 1) {
+        if (!+bytes) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`;
+    }
+
+    function parseQuery(query) {
+        if (!query) return null;
+        return query.toLowerCase().split(/\s+or\s+|\|/).map(group => {
+            const positive = [];
+            const negative = [];
+            let expectNot = false;
+            for (const token of group.trim().split(/\s+/)) {
+                if (token === 'not') { expectNot = true; continue; }
+                const isNegated = expectNot || token.startsWith('-');
+                const cleanToken = token.startsWith('-') ? token.substring(1) : token;
+                expectNot = false;
+                if (!cleanToken) continue;
+                (isNegated ? negative : positive).push(cleanToken);
+            }
+            return { positive, negative };
+        });
+    }
+
+    function matches(targetText, parsedQuery) {
+        if (!parsedQuery) return true;
+        return parsedQuery.some(group =>
+            group.positive.every(word => targetText.includes(word)) &&
+            !group.negative.some(word => targetText.includes(word)));
+    }
+
+    function parseUsesQuery(query) {
+        if (!query) return null;
+        const match = query.trim().match(/^(>=|<=|>|<|==|=|)?\s*(\d+)$/);
+        if (!match) return () => false;
+        const op = match[1] || '=';
+        const val = parseInt(match[2], 10);
+        return (count) => ({ '>': count > val, '<': count < val, '>=': count >= val, '<=': count <= val, '=': count === val, '==': count === val })[op];
+    }
+
+    function loadIndex(index) {
+        groups = [];
+        for (const [fingerprint, file] of Object.entries(index.files || {})) {
+            groups.push({
+                kind: 'file', key: fingerprint, names: file.names || [], size: file.size || 0,
+                date: file.first_uploaded || '', href: inFolder(FILES_URL, file.stored_as), places: file.used_in || []
+            });
+        }
+        for (const [url, link] of Object.entries(index.links || {})) {
+            let domain = '';
+            try { domain = new URL(url).hostname.replace(/^www\./, ''); } catch (e) { /* not a full address */ }
+            groups.push({
+                kind: 'link', key: url, names: link.names || [], size: 0, date: '', href: url, domain,
+                isDrive: domain === 'docs.google.com' || domain === 'drive.google.com',
+                notStored: link.not_stored || '', places: link.used_in || []
+            });
+        }
+        render();
+    }
+
+    function render() {
+        const value = (id) => document.getElementById(id).value;
+        const includeFiles = document.getElementById('includeFiles').checked;
+        const includeLinks = document.getElementById('includeLinks').checked;
+
+        // Keep the filters in the address, so a view can be bookmarked or shared
+        const url = new URL(window.location);
+        for (const [param, id] of Object.entries(FILTER_IDS)) {
+            value(id) ? url.searchParams.set(param, value(id)) : url.searchParams.delete(param);
+        }
+        url.searchParams.set('files_shown', includeFiles);
+        url.searchParams.set('links_shown', includeLinks);
+        window.history.replaceState({}, '', url);
+
+        const byBoard = parseQuery(value('filterBoard'));
+        const byName = parseQuery(value('filterName'));
+        const byPath = parseQuery(value('filterPath'));
+        const usesOk = parseUsesQuery(value('filterUses'));
+
+        const visible = [];
+        for (const group of groups) {
+            if (group.kind === 'file' ? !includeFiles : !includeLinks) continue;
+            const nameText = [...group.names, group.domain || '', group.isDrive ? 'drive document' : ''].join(' ').toLowerCase();
+            if (!matches(nameText, byName)) continue;
+            const places = group.places.filter(place =>
+                matches(place.board.toLowerCase(), byBoard) && matches(`${place.list} ${place.card}`.toLowerCase(), byPath));
+            if (!places.length && (byBoard || byPath)) continue;
+            if (usesOk && !usesOk(places.length)) continue;
+            visible.push({ group, places });
+        }
+
+        const field = value('sortField');
+        const direction = value('sortDir') === 'asc' ? 1 : -1;
+        const sortValue = ({ group, places }) => field === 'uses' ? places.length
+            : field === 'name' ? (group.names[0] || group.key).toLowerCase()
+            : field === 'size' ? group.size : group.date;
+        visible.sort((a, b) => (sortValue(a) < sortValue(b) ? -1 : sortValue(a) > sortValue(b) ? 1 : 0) * direction);
+
+        let html = '';
+        let totalUses = 0;
+        let totalSize = 0;
+        const unique = (items) => [...new Set(items)];
+
+        for (const { group, places } of visible) {
+            totalUses += places.length;
+            totalSize += group.size;
+
+            const header = group.kind === 'file'
+                ? `sha256:${escapeHtml(group.key)}`
+                    + (group.date ? `<span class="ml-4 text-gray-400"><i class="fa-regular fa-clock mr-1"></i> first uploaded ${escapeHtml(group.date)}</span>` : '')
+                    + `<span class="ml-4 text-gray-400"><i class="fa-solid fa-hard-drive mr-1"></i> ${formatBytes(group.size)}</span>`
+                : 'Link' + (group.notStored ? `<span class="ml-4 text-red-400" title="${escapeHtml(group.notStored)}"><i class="fa-solid fa-triangle-exclamation mr-1"></i> download failed, not stored</span>` : '');
+            html += `<tr><td colspan="5" class="bg-gray-900/50 font-mono text-[11px] text-gray-500 py-1.5 px-4 border-t border-gray-700">${header}</td></tr>`;
+
+            const names = group.names.length ? group.names : [group.key];
+            const namesHtml = names.map(name => {
+                const link = `<a href="${escapeHtml(safeUrl(group.href))}" target="_blank" class="text-blue-400 hover:text-blue-300 font-medium break-words" title="${escapeHtml(name)}">${escapeHtml(name)}</a>`;
+                if (group.isDrive) return `<div class="mb-2">${link} <span class="px-1.5 py-0.5 ml-1 text-[9px] font-bold uppercase rounded bg-orange-900/50 text-orange-400 border border-orange-700/50"><i class="fa-brands fa-google-drive mr-1"></i> Drive</span></div>`;
+                if (group.kind === 'link' && group.domain) return `<div class="mb-2">${link}<div class="text-[10px] text-gray-500">${escapeHtml(group.domain)}</div></div>`;
+                return `<div class="mb-2">${link}</div>`;
+            }).join('');
+
+            // Newest board first, by the creation date in each board's id
+            const boardIds = unique(places.map(p => p.board_id)).sort((a, b) => createdFromId(b) - createdFromId(a));
+            const boardName = (id) => places.find(p => p.board_id === id).board;
+            const column = (items) => items.map(text => `<div class="mb-2 leading-snug break-words">${escapeHtml(text)}</div>`).join('')
+                || '<div class="text-gray-600 italic">not on any board now</div>';
+
+            html += `
+                <tr class="hover:bg-gray-700/20 transition-colors text-xs">
+                    <td class="py-3 px-2 align-top text-center font-bold text-gray-400">${places.length}</td>
+                    <td class="py-3 px-3 align-top border-l border-gray-700/50">${namesHtml}</td>
+                    <td class="py-3 px-3 align-top border-l border-gray-700/50 text-gray-300 font-semibold">${column(boardIds.map(boardName))}</td>
+                    <td class="py-3 px-3 align-top border-l border-gray-700/50 text-gray-400">${column(unique(places.map(p => p.list)).sort())}</td>
+                    <td class="py-3 px-3 align-top border-l border-gray-700/50 text-gray-400">${column(unique(places.map(p => p.card)).sort())}</td>
+                </tr>`;
+        }
+
+        document.getElementById('resultStats').innerHTML = `${totalUses} uses of ${visible.length} files and links`
+            + (totalSize ? ` <span class="ml-2 pl-2 border-l border-gray-600"><i class="fa-solid fa-hard-drive mr-1"></i> ${formatBytes(totalSize)} stored</span>` : '');
+        document.getElementById('tableBody').innerHTML = html
+            || `<tr><td colspan="5" class="py-8 text-center text-gray-500"><i class="fa-solid fa-magnifying-glass mr-2"></i> Nothing matches your filters.</td></tr>`;
+    }
+
+    async function start() {
+        for (const [param, id] of Object.entries(FILTER_IDS)) {
+            if (params.has(param)) document.getElementById(id).value = params.get(param);
+        }
+        if (params.has('files_shown')) document.getElementById('includeFiles').checked = params.get('files_shown') === 'true';
+        if (params.has('links_shown')) document.getElementById('includeLinks').checked = params.get('links_shown') === 'true';
+        ['filterBoard', 'filterName', 'filterPath', 'filterUses'].forEach(id => document.getElementById(id).addEventListener('input', render));
+        ['sortField', 'sortDir', 'includeFiles', 'includeLinks'].forEach(id => document.getElementById(id).addEventListener('change', render));
+
+        document.getElementById('index-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => loadIndex(JSON.parse(evt.target.result));
+            reader.readAsText(file);
+        });
+
+        try {
+            const response = await fetch(`${DATA_URL ? `${DATA_URL}/` : ''}attachments.json`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            loadIndex(await response.json());
+        } catch (error) {
+            document.getElementById('tableBody').innerHTML = `<tr><td colspan="5" class="py-4 px-4 text-gray-400">
+                <i class="fa-solid fa-circle-info text-blue-500 mr-2"></i>
+                Couldn't load attachments.json from "${escapeHtml(DATA_URL || '.')}". Use <b>Open attachments.json</b> above,
+                or add <code>?data=&lt;backup folder&gt;&amp;files=&lt;file store&gt;</code> to this page's address.</td></tr>`;
+        }
+    }
+
+    start();
+</script>
+</body>
+</html>

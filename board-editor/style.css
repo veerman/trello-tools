@@ -1,0 +1,83 @@
+body { 
+    font-family: 'Inter', sans-serif; 
+}
+
+.spinner {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border-left-color: #fff;
+    animation: spin 1s ease infinite;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+@keyframes spin { 
+    0% { transform: rotate(0deg); } 
+    100% { transform: rotate(360deg); } 
+}
+
+/* --- UI OVERRIDES --- */
+.toastui-editor-mode-switch { display: none !important; }
+.toastui-editor-md-tab-container { display: none !important; }
+.toastui-editor-defaultUI { border: none !important; background-color: transparent !important; }
+
+/* 1. Base Popup Shell */
+.toastui-editor-popup {
+    background-color: #1f2937 !important;
+    border: 1px solid #374151 !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+    z-index: 9999 !important;
+}
+.toastui-editor-popup-body { 
+    background-color: #1f2937 !important; 
+}
+
+/* 2. Headings Dropdown */
+.toastui-editor-popup-add-heading ul li { color: #e5e7eb !important; }
+.toastui-editor-popup-add-heading ul li:hover { background-color: #374151 !important; }
+.toastui-editor-popup-add-heading li[data-level="6"] { display: none !important; }
+
+/* 3. Table Popup */
+.toastui-editor-popup-add-table .toastui-editor-table-cell {
+    background-color: #374151 !important;
+    border: 1px solid #4b5563 !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+.toastui-editor-popup-add-table .toastui-editor-table-cell.selected {
+    background-color: #3b82f6 !important;
+    border-color: #2563eb !important;
+}
+.toastui-editor-popup-add-table .toastui-editor-table-cell.header {
+    background-color: #4b5563 !important;
+}
+.toastui-editor-popup-add-table .toastui-editor-table-description {
+    color: #e5e7eb !important;
+}
+
+/* 4. Link/Image Popup */
+.toastui-editor-popup input[type="text"],
+.toastui-editor-popup input[type="file"] {
+    background-color: #374151 !important;
+    color: #fff !important;
+    border: 1px solid #4b5563 !important;
+}
+.toastui-editor-popup-body label {
+    color: #9ca3af !important;
+    font-weight: 600;
+}
+.toastui-editor-ok-button {
+    background-color: #2563eb !important;
+    color: white !important;
+}
+.toastui-editor-close-button {
+    background-color: #4b5563 !important;
+    color: white !important;
+}
+
+/* 5. Image Popup: Force URL-only Mode */
+.toastui-editor-popup-add-image .toastui-editor-tabs {
+    display: none !important;
+}

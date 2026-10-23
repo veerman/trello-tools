@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Updates Guide</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ol.steps > li { margin-top: 1.25rem; }
+        ol.steps > li > h2 { color: #fff; font-weight: 600; }
+        ul.sub { list-style: disc; padding-left: 1.25rem; margin-top: 0.5rem; }
+        ul.sub > li { margin-top: 0.25rem; }
+        code { background: #374151; padding: 0 0.3rem; border-radius: 0.25rem; font-size: 0.85em; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-300 min-h-screen p-4">
+
+    <div class="w-full max-w-3xl mx-auto bg-gray-800 rounded-lg shadow-xl p-6 border border-gray-700 text-sm leading-relaxed">
+
+        <h1 class="text-xl font-bold text-white border-b border-gray-700 pb-4">Updates Guide</h1>
+        <p class="mt-4 text-gray-400">How to update a board with the editor: load the last version, edit it as Markdown, check the changes, and save it to Trello as a new board.</p>
+
+        <ol class="steps list-decimal pl-5">
+            <li>
+                <h2>Decide what changes</h2>
+                <p>Review feedback and agree on the list of changes before anyone opens the editor.</p>
+            </li>
+            <li>
+                <h2>Pick one lead editor</h2>
+                <p>Only this person edits in the tool and saves and loads the Markdown file. One editor and one file is your version control.</p>
+            </li>
+            <li>
+                <h2>Track changes in a separate doc</h2>
+                <p>Write a short summary of each change and the reason for it.</p>
+            </li>
+            <li>
+                <h2>Edit the board</h2>
+                <ul class="sub">
+                    <li><b>Connect to Trello</b> (the first time, paste your Trello API key), pick the workspace, then load the previous version of the board.</li>
+                    <li>Edit cards in Markdown: descriptions, links, checklists, attachments. Follow the format in <a class="text-blue-400 hover:underline" href="trello-markdown-guide.md" target="_blank">trello-markdown-guide.md</a>.</li>
+                    <li>Switch views as needed: Markdown, MD/Doc, Doc, MD/Board, Board, or <b>View on Trello</b>.</li>
+                    <li>Taking a break: <b>Save to File</b>. On the first save, rename the file for the new version.</li>
+                    <li>Coming back: <b>Load from File</b>, then keep editing.</li>
+                </ul>
+            </li>
+            <li>
+                <h2>Use AI for bulk changes (optional)</h2>
+                <ul class="sub">
+                    <li>Copy a few lists at a time from the Markdown view. Small chunks keep the AI accurate and inside its context window.</li>
+                    <li>Open <b>Help &gt; Modify Board Prompt</b>, copy it, and paste it into your AI tool with the chunk and your list of changes.</li>
+                    <li>Replace the chunk in the editor with the AI's output, then save.</li>
+                    <li>Check that card titles and wording did not change where they should not. The check (next step) lists renamed and missing cards for you.</li>
+                    <li>If the check finds problems, click <b>Copy report</b> and paste it into your AI tool with the board Markdown to have it fix them.</li>
+                    <li>To ask questions about a board instead of changing it, use <b>Help &gt; Query Board Prompt</b>.</li>
+                </ul>
+            </li>
+            <li>
+                <h2>Review</h2>
+                <ul class="sub">
+                    <li>Click the check summary next to the <b>Editor</b> heading (it also opens when you click <b>Save to Trello</b>). It lists:
+                        <b>problems</b> that would stop the save, <b>warnings</b> about content that would be ignored, and <b>changes</b> compared with the board you started from: removed, renamed, new, and moved cards, removed attachments, and fewer checklist items.</li>
+                    <li>The original is the board you loaded from Trello. If you started from a file, it is the first file you loaded. To compare with a different file, use <b>Use a different original...</b> in the check.</li>
+                    <li>For a line-by-line view, open <b>Help &gt; Compare Markdown</b> and load the previous file and the new one. Make sure links and attachments work.</li>
+                </ul>
+            </li>
+            <li>
+                <h2>Publish</h2>
+                <ul class="sub">
+                    <li>Name the file for the new version and load the final file.</li>
+                    <li>Click <b>Save to Trello</b>. This creates a new board in the chosen workspace.</li>
+                    <li>Check that file attachments on the new board open for the people who need them.</li>
+                    <li>Share the new board with the people who need it.</li>
+                </ul>
+            </li>
+        </ol>
+
+        <p class="mt-6 pt-4 border-t border-gray-700 text-gray-400">Why Markdown: its plain text structure shows the board's hierarchy clearly to both people and AI tools, so updates are faster and have fewer errors than editing cards one by one in Trello.</p>
+    </div>
+
+</body>
+</html>

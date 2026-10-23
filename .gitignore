@@ -1,0 +1,18 @@
+# secrets
+.env
+*.env
+!.env.example
+
+# board backup output, file store, and excluded boards (private board content); point
+# BACKUP_DIR, FILE_STORE, and EXCLUDED_DIR outside this repo, these are only the defaults
+board-backup/backup/
+board-backup/files/
+board-backup/excluded/
+trello_data/
+
+# browser captures and local junk
+*.har
+__pycache__/
+desktop.ini
+Thumbs.db
+.DS_Store

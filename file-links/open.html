@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Opening file...</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #111827; color: #d1d5db; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        main { max-width: 32rem; padding: 1.5rem; text-align: center; }
+        h1 { font-size: 1.1rem; font-weight: 600; color: #fff; }
+        p { font-size: 0.9rem; color: #9ca3af; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1 id="title">Opening...</h1>
+        <p id="detail"></p>
+    </main>
+
+<script>
+    // The address of the lookup web app (lookup.gs, deployed from your Sheet). Whoever hosts this
+    // page fills it in; the page itself holds no list of files.
+    const LOOKUP_URL = '';
+
+    const title = document.getElementById('title');
+    const detail = document.getElementById('detail');
+    const name = (new URLSearchParams(window.location.search).get('f') || '').trim();
+    const fail = (heading, text) => {
+        document.title = heading;
+        title.textContent = heading;
+        detail.textContent = text;
+    };
+
+    if (!name) {
+        fail('No file named', 'This link is missing the file name (?f=...).');
+    } else if (!LOOKUP_URL) {
+        fail('Not set up yet', 'LOOKUP_URL at the top of this page is empty. See file-links/README.md.');
+    } else {
+        title.textContent = `Opening ${name}...`;
+        fetch(`${LOOKUP_URL}?f=${encodeURIComponent(name)}`)
+            .then(response => response.json())
+            .then(result => {
+                // Only ever jump to a web address
+                if (result.url && /^https:\/\//i.test(result.url)) window.location.replace(result.url);
+                else fail(`No file called "${name}"`, 'Check the link, or ask whoever manages the file list.');
+            })
+            .catch(() => fail(`Couldn't open "${name}"`, 'The file list could not be reached. Try again in a minute.'));
+    }
+</script>
+</body>
+</html>
