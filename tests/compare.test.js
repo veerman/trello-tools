@@ -73,11 +73,11 @@ test('extra spaces inside a line can be ignored without ignoring indentation', (
     assert.deepStrictEqual(marked(plain(inlineDiff('a  b c', 'a b d', { ...DEFAULT_COMPARE_OPTIONS, spaces: true })).left), ['c']);
 });
 
-test('ignored blank lines stay in place without counting as differences', () => {
+test('blank lines are ignored by default, staying in place without counting as differences', () => {
     const left = ['# Board', '', '', '## List', 'card'];
     const right = ['# Board', '## List', '', 'card'];
-    assert.ok(compare(left, right).blocks.length > 0);
-    const result = compare(left, right, { blankLines: true });
+    assert.ok(compare(left, right, { blankLines: false }).blocks.length > 0);
+    const result = compare(left, right);
     assert.strictEqual(result.blocks.length, 0);
     assert.ok(types(result).includes('ignored'));
     assertComplete(result);

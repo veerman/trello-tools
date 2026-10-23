@@ -2,7 +2,7 @@
 // Plain functions with no page code, so the Node tests can run them.
 
 // What to ignore when deciding whether two lines are the same. Lines are always shown as written.
-const DEFAULT_COMPARE_OPTIONS = { trailing: true, leading: true, spaces: false, blankLines: false, case: false };
+const DEFAULT_COMPARE_OPTIONS = { trailing: true, leading: true, spaces: false, blankLines: true, case: false };
 
 // Past this many added plus removed lines, the rest of the texts counts as one big change,
 // which keeps memory in check when two very different files are compared
