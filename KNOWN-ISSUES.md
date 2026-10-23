@@ -16,15 +16,8 @@ The Markdown already carries what an importer needs to tell files from links: up
 
 ## 2. Following boards over time
 
-Done: the backup is made for a private git repo. Each board is one Markdown file that starts with its details (id, link, created, last activity), and each attachment is stored once, named by its fingerprint, so the same file is recognisable across boards even when its links differ.
-
-Next:
-
-1. A lineage file that says which boards are versions of the same board (for example the same roadmap re-issued every term under a new name), in order. Drafts and staging boards are marked as side boards, and a line can note that it started from another line's board. A small page helps group and order boards, using creation dates and suggesting groups from shared card titles. It also settles which of two same-named boards is which: on disk they are already safe, since each file name ends with the board's id.
-2. One history file per line, holding its newest board, so that file's git history shows every change from version to version. Backfilled from older backups.
-3. Optional: a change list for each step, with "why" and "temporary?" to fill in, and a "made from" stamp when the editor creates a board.
+Done: lines of board versions (lineage.py, lineage.json) and one history file per line whose git history shows each version (see board-backup/README.md). Optional next: a change list for each step, with "why" and "temporary?" to fill in, and a "made from" stamp when the editor creates a board.
 
 ## 3. Small things
 
 - backup.py only backs up open boards you are a member of, so closed boards, and workspace boards you haven't joined, are missing. A board closed after an earlier run keeps its last file.
-- Not in the format yet: labels, due dates, members, and custom fields.

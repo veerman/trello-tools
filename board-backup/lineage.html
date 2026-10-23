@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Board Lineage</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared/compare.css">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tile.dragging, .free-board.dragging { opacity: 0.4; }
+        .drop-target { outline: 2px dashed #3b82f6; outline-offset: 2px; }
+        .tile.side { border-style: dashed; opacity: 0.75; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 min-h-screen p-4 md:p-8">
+
+    <div class="w-full max-w-7xl mx-auto">
+
+        <div class="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-6 flex flex-wrap justify-between items-start gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fa-solid fa-code-branch text-blue-500"></i> Board Lineage
+                </h1>
+                <p class="text-xs text-gray-400 mt-1 pl-9 max-w-3xl">Put boards that are versions of the same board into one line, oldest first. Side boards (drafts, test copies) stay in the line but out of its history. Every change is saved to lineage.json in the backup folder.</p>
+                <p id="counts" class="text-xs text-gray-500 mt-2 pl-9"></p>
+            </div>
+            <span id="save-status" class="text-xs text-gray-400 py-2" aria-live="polite"></span>
+        </div>
+
+        <div id="note" class="hidden mb-4 text-xs text-yellow-200 bg-yellow-900/30 border border-yellow-800 rounded p-3"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-[20rem_1fr] gap-6 items-start">
+
+            <div id="free-panel" class="bg-gray-800 rounded-lg border border-gray-700 p-4 lg:sticky lg:top-4">
+                <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Not in a line <span id="free-count" class="text-gray-500"></span></h2>
+                <p class="text-[11px] text-gray-500 mb-3">Drag a board onto a line, pick a line for it, or start a new line from it. Drop a board here to take it out of its line.</p>
+                <input id="search" type="search" placeholder="Search boards" class="w-full bg-gray-900 border border-gray-600 rounded py-1.5 px-3 text-xs text-gray-200 outline-none focus:border-blue-500 mb-3">
+                <div id="free-list" class="space-y-2 lg:max-h-[70vh] overflow-y-auto pr-1"></div>
+            </div>
+
+            <div class="space-y-6">
+                <div id="suggestions"></div>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Lines</h2>
+                    <button id="new-line-btn" class="px-3 py-1.5 rounded text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 flex items-center gap-2"><i class="fa-solid fa-plus"></i> New line</button>
+                </div>
+                <div id="lines" class="space-y-4"><p class="text-sm text-gray-400">Loading boards...</p></div>
+                <p class="text-xs text-gray-500">When you're done, close this tab and press Ctrl+C in the terminal. Then <code class="text-gray-300">python lineage.py --history</code> writes one history file per line, one git commit per version, so the file's history shows what changed from version to version.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="compare-overlay" class="hidden fixed inset-0 z-50 bg-[#1a1a1a] text-gray-200 flex flex-col">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 bg-gray-900 border-b border-gray-700 text-xs">
+            <span class="text-sm font-bold text-white flex items-center gap-2"><i class="fa-solid fa-code-compare text-blue-500"></i> Compare versions</span>
+            <div class="flex items-center gap-1">
+                <button id="compare-prev-btn" class="cmp-nav" title="Previous difference (p)"><i class="fa-solid fa-chevron-up"></i></button>
+                <button id="compare-next-btn" class="cmp-nav" title="Next difference (n)"><i class="fa-solid fa-chevron-down"></i></button>
+                <span id="compare-summary" class="ml-2 text-gray-400"></span>
+            </div>
+            <div id="compare-ignore" class="flex flex-wrap items-center gap-1">
+                <span class="text-gray-500 mr-1">Ignore</span>
+            </div>
+            <button id="compare-close-btn" class="cmp-btn ml-auto" title="Back to the lines (Esc)"><i class="fa-solid fa-xmark"></i> Close</button>
+        </div>
+        <div id="compare-heads" class="cmp-heads">
+            <div id="compare-head-left" class="cmp-head"></div>
+            <div id="compare-head-right" class="cmp-head"></div>
+        </div>
+        <div class="flex-1 min-h-0 flex relative">
+            <div id="compare-scroller" class="flex-1 min-w-0 overflow-y-auto relative">
+                <div id="compare-rows" class="cmp-diff"></div>
+            </div>
+            <div id="compare-ruler" class="cmp-ruler" title="Differences: orange is only in the older board, blue only in the newer"></div>
+        </div>
+    </div>
+
+<script src="shared/diff.js"></script>
+<script src="shared/compare-view.js"></script>
+<script>
+    // Names come from the board files, so they are escaped before they go into innerHTML
+    const escapeHtml = (text) => String(text ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const trelloUrl = (url) => /^https:\/\/trello\.com\//.test(url || '') ? url : '#';
+    const $ = (id) => document.getElementById(id);
+
+    let boards = [];
+    let byId = {};
+    let lines = [];           // [{ name, boards: [{ id, side }], started_from: id or null }]
+    let suggestions = [];
+    const dismissed = new Set();
+    let dragged = null;       // id of the board being dragged
+
+    // --- Saving: every change, shortly after it ---
+    const status = (text, problem = false) => {
+        $('save-status').textContent = text;
+        $('save-status').className = `text-xs py-2 ${problem ? 'text-orange-300' : 'text-gray-400'}`;
+    };
+    let saveTimer;
+    const save = () => {
+        status('Saving...');
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(async () => {
+            const body = JSON.stringify({ lines: lines.map(l => ({ name: l.name, boards: l.boards.map(b => ({ id: b.id, side: !!b.side })), started_from: l.started_from || null })) });
+            try {
+                const response = await fetch('lineage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+                const data = await response.json();
+                if (!response.ok) return status(`Not saved: ${data.error}`, true);
+                suggestions = data.suggestions;
+                renderSuggestions();
+                status('Saved');
+            } catch (e) {
+                status('Not saved: is lineage.py still running?', true);
+            }
+        }, 250);
+    };
+
+    // --- Changing the lines ---
+    const created = (id) => (byId[id] || {}).created || '';
+    const placed = () => new Set(lines.flatMap(l => l.boards.map(b => b.id)));
+    const uniqueName = (name, except = null) => {
+        const taken = new Set(lines.filter(l => l !== except).map(l => l.name.toLowerCase()));
+        let candidate = name.trim() || 'New line';
+        for (let n = 2; taken.has(candidate.toLowerCase()); n++) candidate = `${name.trim()} (${n})`;
+        return candidate;
+    };
+    const takeOut = (id) => lines.forEach(l => { l.boards = l.boards.filter(b => b.id !== id); });
+    // Placed by creation date, unless a position is given
+    const put = (line, entry, before = null) => {
+        takeOut(entry.id);
+        if (line.started_from === entry.id) line.started_from = null;
+        let at = before !== null ? line.boards.findIndex(b => b.id === before) : line.boards.findIndex(b => created(b.id) > created(entry.id));
+        if (at < 0) at = line.boards.length;
+        line.boards.splice(at, 0, { id: entry.id, side: !!entry.side });
+    };
+    const newLine = (name, entries = []) => {
+        const line = { name: uniqueName(name), boards: [], started_from: null };
+        lines.unshift(line);
+        entries.forEach(entry => put(line, entry));
+        return line;
+    };
+    const change = () => { render(); save(); };
+
+    // --- Showing them ---
+    const boardMeta = (b) => `Created ${escapeHtml(b.created || '?')} · ${b.cards} card${b.cards === 1 ? '' : 's'}`;
+
+    const renderFree = () => {
+        const inLines = placed();
+        const term = $('search').value.trim().toLowerCase();
+        const free = boards.filter(b => !inLines.has(b.id));
+        $('free-count').textContent = `(${free.length})`;
+        const shown = free.filter(b => !term || b.name.toLowerCase().includes(term));
+        const options = lines.map((l, i) => `<option value="${i}">${escapeHtml(l.name)}</option>`).join('');
+        $('free-list').innerHTML = shown.map(b => `
+            <div class="free-board bg-gray-900/60 border border-gray-700 rounded p-2 cursor-grab" draggable="true" data-id="${escapeHtml(b.id)}">
+                <div class="text-sm text-white leading-snug">${escapeHtml(b.name)}</div>
+                <div class="text-[11px] text-gray-500 mt-0.5">${boardMeta(b)}</div>
+                <div class="flex items-center gap-2 mt-2">
+                    ${lines.length ? `<select class="add-to flex-1 min-w-0 bg-gray-800 border border-gray-600 rounded text-[11px] py-0.5 px-1 text-gray-300" aria-label="Add to a line"><option value="">Add to line...</option>${options}</select>` : ''}
+                    <button class="new-from text-[11px] text-blue-300 hover:text-blue-200 whitespace-nowrap" title="Start a new line with this board"><i class="fa-solid fa-plus"></i> New line</button>
+                </div>
+            </div>`).join('') || `<p class="text-xs text-gray-500">${free.length ? 'No board matches.' : 'Every board is in a line.'}</p>`;
+    };
+
+    const renderSuggestions = () => {
+        const shown = suggestions.filter(s => !dismissed.has(s.name));
+        if (!shown.length) { $('suggestions').innerHTML = ''; return; }
+        $('suggestions').innerHTML = `
+            <div class="bg-gray-800 rounded-lg border border-blue-900/60 p-4">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+                    <h2 class="text-sm font-semibold text-blue-300 uppercase tracking-wide"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Suggested lines (${shown.length})</h2>
+                    <button class="accept-all text-xs px-2 py-1 rounded border border-blue-800 text-blue-200 hover:bg-blue-900/40">Make all ${shown.length}</button>
+                </div>
+                <p class="text-[11px] text-gray-500 mb-3">From similar names and shared card titles, oldest first. Check the order after you accept; you can change anything.</p>
+                <div class="space-y-2">${shown.map((s, i) => `
+                    <div class="suggestion flex flex-wrap items-center gap-3 bg-gray-900/60 border border-gray-700 rounded p-2" data-index="${suggestions.indexOf(s)}">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-white">${escapeHtml(s.name)}</div>
+                            <div class="text-[11px] text-gray-400">${s.boards.map(b => escapeHtml((byId[b.id] || {}).name) + (b.side ? ' <span class="text-gray-500">(side)</span>' : '')).join(' <i class="fa-solid fa-arrow-right text-gray-600 mx-0.5"></i> ')}</div>
+                        </div>
+                        <button class="accept text-xs px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white">Make this line</button>
+                        <button class="dismiss text-xs px-2 py-1 rounded border border-gray-600 text-gray-300 hover:bg-gray-700">Not a line</button>
+                    </div>`).join('')}
+                </div>
+            </div>`;
+    };
+
+    const tile = (entry, lineIndex) => {
+        const b = byId[entry.id];
+        return `
+            <div class="tile ${entry.side ? 'side' : ''} w-56 bg-gray-900/60 border border-gray-600 rounded p-2 cursor-grab" draggable="true" data-id="${escapeHtml(entry.id)}" data-line="${lineIndex}">
+                <div class="flex items-start gap-2">
+                    <div class="flex-1 text-sm text-white leading-snug">${escapeHtml(b.name)}</div>
+                    ${entry.side ? '<span class="text-[10px] uppercase tracking-wide text-gray-300 border border-gray-500 rounded px-1">Side</span>' : ''}
+                </div>
+                <div class="text-[11px] text-gray-500 mt-0.5">${boardMeta(b)}</div>
+                <div class="flex items-center gap-3 mt-2 text-[11px] text-gray-400">
+                    <button data-act="earlier" class="hover:text-white" title="Move earlier"><i class="fa-solid fa-arrow-left"></i></button>
+                    <button data-act="later" class="hover:text-white" title="Move later"><i class="fa-solid fa-arrow-right"></i></button>
+                    <button data-act="side" class="hover:text-white" title="${entry.side ? 'Make it a main version' : 'Mark as a side board (a draft or copy, left out of the history)'}">${entry.side ? 'Make main' : 'Mark side'}</button>
+                    <a href="${escapeHtml(trelloUrl(b.url))}" target="_blank" class="hover:text-white" title="Open in Trello"><i class="fa-brands fa-trello"></i></a>
+                    <button data-act="out" class="ml-auto hover:text-white" title="Take out of this line"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>`;
+    };
+    const connector = (a, b) => `
+        <button class="compare self-center text-gray-500 hover:text-blue-300 px-1" data-a="${escapeHtml(a)}" data-b="${escapeHtml(b)}" title="Compare these two">
+            <i class="fa-solid fa-arrow-right"></i><div class="text-[10px]">compare</div>
+        </button>`;
+
+    const renderLines = () => {
+        if (!lines.length) {
+            $('lines').innerHTML = '<p class="text-sm text-gray-400">No lines yet. Accept a suggestion, start one from a board on the left, or use New line.</p>';
+            return;
+        }
+        const inLines = placed();
+        $('lines').innerHTML = lines.map((line, i) => {
+            const others = lines.filter(l => l !== line);
+            const startOptions = others.map(l => `<optgroup label="${escapeHtml(l.name)}">${l.boards.map(b => `<option value="${escapeHtml(b.id)}"${line.started_from === b.id ? ' selected' : ''}>${escapeHtml(byId[b.id].name)}</option>`).join('')}</optgroup>`).join('')
+                + `<optgroup label="Not in a line">${boards.filter(b => !inLines.has(b.id)).map(b => `<option value="${escapeHtml(b.id)}"${line.started_from === b.id ? ' selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}</optgroup>`;
+            const mains = line.boards.filter(b => !b.side).length;
+            const start = line.started_from && byId[line.started_from]
+                ? `<div class="self-center text-[11px] text-gray-400 border border-gray-700 rounded px-2 py-1 max-w-[12rem]">Started from<div class="text-gray-200">${escapeHtml(byId[line.started_from].name)}</div></div>`
+                    + (line.boards[0] ? connector(line.started_from, line.boards[0].id) : '')
+                : '';
+            const tiles = line.boards.map((entry, k) => (k ? connector(line.boards[k - 1].id, entry.id) : '') + tile(entry, i)).join('');
+            return `
+                <div class="line bg-gray-800 rounded-lg border border-gray-700 p-4" data-line="${i}">
+                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                        <input class="line-name bg-gray-900 border border-gray-600 rounded py-1 px-2 text-sm font-semibold text-white outline-none focus:border-blue-500 w-72 max-w-full" value="${escapeHtml(line.name)}" aria-label="Line name">
+                        <span class="text-xs text-gray-500">${mains} version${mains === 1 ? '' : 's'}${line.boards.length > mains ? `, ${line.boards.length - mains} side` : ''}</span>
+                        <label class="text-xs text-gray-400 flex items-center gap-2 ml-auto">Started from
+                            <select class="line-start bg-gray-900 border border-gray-600 rounded text-xs py-1 px-1 text-gray-300 max-w-[16rem]"><option value="">nothing</option>${startOptions}</select>
+                        </label>
+                        <button class="line-delete text-gray-500 hover:text-white text-xs" title="Delete this line (its boards go back to the list)"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                    <div class="line-boards flex flex-wrap items-stretch gap-2 min-h-[4rem] rounded" data-line="${i}">
+                        ${start}${tiles || '<p class="text-xs text-gray-500 self-center">Drop boards here.</p>'}
+                    </div>
+                </div>`;
+        }).join('');
+    };
+
+    const render = () => {
+        const inLines = placed().size;
+        $('counts').textContent = `${boards.length} boards: ${inLines} in ${lines.length} line${lines.length === 1 ? '' : 's'}, ${boards.length - inLines} not in a line.`;
+        renderFree();
+        renderSuggestions();
+        renderLines();
+    };
+
+    // --- Clicks ---
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('button');
+        if (!el) return;
+        if (el.id === 'new-line-btn') { newLine('New line'); change(); return; }
+        if (el.classList.contains('new-from')) {
+            const id = el.closest('.free-board').dataset.id;
+            newLine(byId[id].base_name, [{ id }]);
+            return change();
+        }
+        if (el.classList.contains('accept') || el.classList.contains('accept-all')) {
+            const picked = el.classList.contains('accept-all')
+                ? suggestions.filter(s => !dismissed.has(s.name))
+                : [suggestions[Number(el.closest('.suggestion').dataset.index)]];
+            picked.forEach(s => newLine(s.name, s.boards));
+            return change();
+        }
+        if (el.classList.contains('dismiss')) {
+            dismissed.add(suggestions[Number(el.closest('.suggestion').dataset.index)].name);
+            return renderSuggestions();
+        }
+        if (el.classList.contains('compare')) return openCompare(el.dataset.a, el.dataset.b);
+        if (el.classList.contains('line-delete')) {
+            const line = lines[Number(el.closest('.line').dataset.line)];
+            if (line.boards.length && !confirm(`Delete "${line.name}"? Its boards go back to the list.`)) return;
+            lines = lines.filter(l => l !== line);
+            return change();
+        }
+        const act = el.dataset.act;
+        if (act) {
+            const card = el.closest('.tile');
+            const line = lines[Number(card.dataset.line)];
+            const at = line.boards.findIndex(b => b.id === card.dataset.id);
+            if (act === 'earlier' && at > 0) line.boards.splice(at - 1, 0, line.boards.splice(at, 1)[0]);
+            if (act === 'later' && at < line.boards.length - 1) line.boards.splice(at + 1, 0, line.boards.splice(at, 1)[0]);
+            if (act === 'side') line.boards[at].side = !line.boards[at].side;
+            if (act === 'out') line.boards.splice(at, 1);
+            change();
+        }
+    });
+
+    document.addEventListener('change', (e) => {
+        if (e.target.classList.contains('add-to') && e.target.value !== '') {
+            put(lines[Number(e.target.value)], { id: e.target.closest('.free-board').dataset.id });
+            change();
+        } else if (e.target.classList.contains('line-name')) {
+            const line = lines[Number(e.target.closest('.line').dataset.line)];
+            line.name = uniqueName(e.target.value, line);
+            change();
+        } else if (e.target.classList.contains('line-start')) {
+            lines[Number(e.target.closest('.line').dataset.line)].started_from = e.target.value || null;
+            change();
+        }
+    });
+    $('search').addEventListener('input', renderFree);
+
+    // --- Dragging: onto a line (by creation date), onto a board in a line (just before it), or back to the list ---
+    document.addEventListener('dragstart', (e) => {
+        const card = e.target.closest('[draggable="true"]');
+        if (!card) return;
+        dragged = card.dataset.id;
+        card.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', dragged);
+    });
+    document.addEventListener('dragend', () => {
+        dragged = null;
+        document.querySelectorAll('.dragging, .drop-target').forEach(el => el.classList.remove('dragging', 'drop-target'));
+    });
+    const dropZone = (target) => target.closest('.tile') || target.closest('.line-boards') || target.closest('#free-panel');
+    document.addEventListener('dragover', (e) => {
+        const zone = dragged && dropZone(e.target);
+        if (!zone) return;
+        e.preventDefault();
+        document.querySelectorAll('.drop-target').forEach(el => el !== zone && el.classList.remove('drop-target'));
+        zone.classList.add('drop-target');
+    });
+    document.addEventListener('drop', (e) => {
+        const zone = dragged && dropZone(e.target);
+        if (!zone) return;
+        e.preventDefault();
+        if (zone.id === 'free-panel') takeOut(dragged);
+        else if (zone.classList.contains('tile')) {
+            if (zone.dataset.id !== dragged) {
+                const side = lines.flatMap(l => l.boards).find(b => b.id === dragged)?.side;
+                put(lines[Number(zone.dataset.line)], { id: dragged, side }, zone.dataset.id);
+            }
+        } else {
+            const side = lines.flatMap(l => l.boards).find(b => b.id === dragged)?.side;
+            put(lines[Number(zone.dataset.line)], { id: dragged, side });
+        }
+        change();
+    });
+
+    // --- Comparing two versions (the Compare view from the browser tools) ---
+    const compareOverlay = $('compare-overlay');
+    const compareView = new CompareView({
+        scroller: $('compare-scroller'), rows: $('compare-rows'), ruler: $('compare-ruler'), summary: $('compare-summary'),
+        prevBtn: $('compare-prev-btn'), nextBtn: $('compare-next-btn'), ignoreGroup: $('compare-ignore')
+    });
+    const head = (el, board, text) => {
+        const count = splitLines(text).length;
+        el.innerHTML = `<span class="name" title="${escapeHtml(board.name)}">${escapeHtml(board.name)}</span><span class="lines">${escapeHtml(board.created)} · ${count} lines</span>`;
+    };
+    const openCompare = async (a, b) => {
+        const [older, newer] = await Promise.all([a, b].map(id => fetch(`board/${encodeURIComponent(id)}`).then(r => r.text())));
+        compareOverlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        head($('compare-head-left'), byId[a], older);
+        head($('compare-head-right'), byId[b], newer);
+        compareView.compare(older, newer);
+        $('compare-heads').style.marginRight = `${compareView.rightEdge()}px`;
+    };
+    const closeCompare = () => {
+        compareOverlay.classList.add('hidden');
+        document.body.style.overflow = '';
+    };
+    $('compare-close-btn').addEventListener('click', closeCompare);
+    document.addEventListener('keydown', (e) => {
+        if (compareOverlay.classList.contains('hidden')) return;
+        if (e.key === 'Escape') closeCompare();
+        if (e.key === 'n' || e.key === 'j') compareView.next();
+        if (e.key === 'p' || e.key === 'k') compareView.previous();
+    });
+
+    // --- Start ---
+    (async () => {
+        const data = await (await fetch('data')).json();
+        boards = data.boards;
+        byId = Object.fromEntries(boards.map(b => [b.id, b]));
+        lines = data.lineage.lines.map(l => ({ name: l.name, boards: l.boards.map(b => ({ id: b.id, side: !!b.side })), started_from: l.started_from ? l.started_from.id : null }));
+        suggestions = data.suggestions;
+        if (data.dropped) {
+            $('note').textContent = `${data.dropped} board${data.dropped === 1 ? ' is' : 's are'} no longer in the backup (marked Out, perhaps), so ${data.dropped === 1 ? 'it was' : 'they were'} taken out of the lines. Saved on your next change.`;
+            $('note').classList.remove('hidden');
+        }
+        render();
+    })();
+</script>
+</body>
+</html>

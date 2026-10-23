@@ -179,6 +179,14 @@ def main():
         store.save()
     store.set_dates()
 
+    # Each line's history file follows its newest board (lineage.py imports this module, so import here)
+    from lineage import update_history
+    updated, without_history = update_history(backup_dir)
+    if updated:
+        print(f"History: {len(updated)} line{'s' if len(updated) > 1 else ''} updated ({', '.join(updated)}).")
+    if without_history:
+        print(f"{len(without_history)} line{'s have' if len(without_history) > 1 else ' has'} no history file yet. To write it: python lineage.py --history")
+
     print(f"\nDone: {len(boards) - len(failed_boards)} of {len(boards)} boards saved.")
     print(f"Files: {store.downloaded} downloaded, {store.reused} already in the store.")
     for name in failed_boards:

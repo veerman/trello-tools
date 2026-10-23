@@ -12,6 +12,9 @@ backup/                               (BACKUP_DIR: make this a private git repo)
     Project Roadmap [<board id>].md     one file per board
   attachments.json                    index of every stored file and every link
   board-choices.json                  which boards to keep (from review_boards.py)
+  lineage.json                        which boards are versions of each other (from lineage.py)
+  history/
+    Project Roadmap.md                  one file per line: its newest board, with every version in git history
   files/                              (FILE_STORE: listed in .gitignore, so it stays out of git)
     3f2a9c1b7d4e5a60.docx             each file once, named by its fingerprint
 excluded/                             (EXCLUDED_DIR: boards not marked In; never in git or on Drive)
@@ -46,6 +49,16 @@ After the first review, a board is **included** only when it is marked In; every
 - Change your mind any time: run the review again. When you stop it (and at the start of every backup run), boards and files whose choice changed move to the right side. The three folders must be separate; the scripts refuse to run otherwise.
 
 A new board stays out until you mark it In; each backup run says how many haven't been reviewed. Boards with "roadmap" or "phase <number>" in the name start as In. board-choices.json keeps the In boards' names and only the ids of Out boards.
+
+## Follow a board over time
+
+A board that is re-issued every term under a new name is a new board to Trello, so its file in `boards/` starts a fresh history each time. A **line** ties those boards together, oldest first.
+
+- `python lineage.py` opens a page on this computer with every board in the backup. Put the versions of one board into a line, drag them into order (new boards go in by creation date), mark drafts and test copies as **side** boards, and note when a line **started from** another line's board. It suggests lines from similar names (term codes and years removed) and from boards that share most of their card titles, and **compare** between two versions puts them side by side. Every change is saved to `lineage.json` in the backup folder. It reads only the backup folder: nothing is fetched from Trello.
+- `python lineage.py --history` then writes `history/<line>.md` for each line that has none yet, one version at a time: the board it started from (if any), then each main version, oldest first, each as its own git commit dated when that board was created. Side boards stay out. It lists the commits and asks before making them, commits only the history files, and pushes nothing. `git log -p -- "history/<line>.md"`, or History on GitHub, then shows what changed from one version to the next.
+- After that, each `backup.py` run keeps each history file at its line's newest board, so edits and next term's board show up as ordinary changes in your next commit. A line added later gets its history the same way: the run says when one is waiting for `--history`.
+
+A history file is built once. If you reorder a line after that, delete its history file (and, if you like, its commits) and run `--history` again.
 
 ## Copy the files to Google Drive
 
