@@ -25,7 +25,7 @@ Help menu:
 
 The editor fetches trello-markdown-guide.md, prompt_modify.txt, and prompt_query.txt from its own folder, so keep them next to index.html.
 
-URL parameters: `?url=<trello board or markdown url>` loads that board or file on open, and `?view=<mode>` picks the starting view.
+URL parameters: `?url=<trello board or markdown url>` loads that board or file on open, `?view=<mode>` picks the starting view, and `?api_key=<key>` saves a shared Trello API key in the browser (then leaves the address).
 
 Attachments are added as links (`POST cards/{id}/attachments` with `url`). A file uploaded to another board keeps that board's link, so it opens for people who can see that board; linking files from a shared file library instead is planned (KNOWN-ISSUES.md).
 

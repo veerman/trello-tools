@@ -11,14 +11,17 @@ const KEY = '0123456789abcdef0123456789abcdef';
 // A fresh fake browser for each test: storage, address bar, history, and fetch
 const loadShared = (href, responses = []) => {
     const store = {};
-    const page = { href, reloaded: false, replacedWith: null, requests: [] };
+    const page = { href, reloaded: false, replacedWith: null, requests: [], waits: [] };
     const context = vm.createContext({
         localStorage: {
             getItem: (k) => (k in store ? store[k] : null),
             setItem: (k, v) => { store[k] = String(v); },
             removeItem: (k) => { delete store[k]; }
         },
-        history: { replaceState: (state, title, url) => { page.replacedWith = url; } },
+        // Like a browser: the address bar changes, without loading the page again
+        history: { replaceState: (state, title, url) => { page.replacedWith = url; page.href = new URL(url, page.href).href; } },
+        // Waits are recorded, not waited out
+        setTimeout: (fn, ms) => { page.waits.push(ms); fn(); },
         window: {
             location: {
                 get href() { return page.href; },
@@ -34,7 +37,8 @@ const loadShared = (href, responses = []) => {
                 return { ok: next.status < 400, status: next.status, text: async () => next.body, json: async () => JSON.parse(next.body) };
             }
         },
-        URL
+        URL,
+        URLSearchParams
     });
     vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'shared', 'trello.js'), 'utf8'), context);
     return { trello: vm.runInContext('trello', context), store, page };
@@ -120,6 +124,63 @@ test('a revoked login is forgotten so the page offers Connect again', async () =
     assert.strictEqual(store.trello_tools_token, 'ABC123');
     await assert.rejects(trello.fetch('members/me'));
     assert.ok(!('trello_tools_token' in store));
+});
+
+test('a shared ?api_key= link saves the key, drops a login made with another key, and leaves the address', () => {
+    const { trello, store, page } = loadShared(`https://example.github.io/trello-tools/board-editor/?api_key=${KEY}&view=board`);
+    store.trello_tools_api_key = 'f'.repeat(32);
+    store.trello_tools_token = 'OLD';
+    assert.strictEqual(trello.init(), '');
+    assert.strictEqual(store.trello_tools_api_key, KEY);
+    assert.ok(!('trello_tools_token' in store), 'a login belongs to the key it was made with');
+    assert.strictEqual(page.replacedWith, '/trello-tools/board-editor/?view=board');
+});
+
+test('the same key again keeps the login; a malformed key is ignored but still leaves the address', () => {
+    const same = loadShared(`http://localhost:8000/board-editor/?api_key=${KEY}`);
+    same.store.trello_tools_api_key = KEY;
+    same.store.trello_tools_token = 'ABC123';
+    assert.strictEqual(same.trello.init(), 'ABC123');
+    assert.strictEqual(same.page.replacedWith, '/board-editor/');
+
+    const bad = loadShared('http://localhost:8000/member-tools/?api_key=<script>&x=1');
+    assert.strictEqual(bad.trello.init(), '');
+    assert.ok(!('trello_tools_api_key' in bad.store));
+    assert.strictEqual(bad.page.replacedWith, '/member-tools/?x=1');
+});
+
+test('the key link and the token from Connect work together', () => {
+    const { trello, store, page } = loadShared(`http://localhost:8000/board-editor/?api_key=${KEY}#token=NEW`);
+    assert.strictEqual(trello.init(), 'NEW');
+    assert.strictEqual(store.trello_tools_api_key, KEY);
+    assert.strictEqual(page.href, 'http://localhost:8000/board-editor/');
+});
+
+test('"too many requests" waits and sends the same request again instead of failing', async () => {
+    const { trello, store, page } = loadShared('http://localhost:8000/', [
+        { status: 429, body: 'API_TOKEN_LIMIT_EXCEEDED' },
+        { status: 429, body: 'API_TOKEN_LIMIT_EXCEEDED' },
+        { status: 200, body: '{"id":"card1"}' }
+    ]);
+    store.trello_tools_api_key = KEY;
+    store.trello_tools_token = 'ABC123';
+    const paused = [];
+    trello.onPause = (seconds) => paused.push(seconds);
+    const result = await trello.fetch('cards?idList=L1', { method: 'POST', body: '{"name":"Kickoff"}' });
+    assert.strictEqual(result.id, 'card1');
+    assert.strictEqual(page.requests.length, 3);
+    assert.ok(page.requests.every(r => r.method === 'POST' && r.url === page.requests[0].url));
+    assert.deepStrictEqual(paused, [10, 20]);
+    assert.deepStrictEqual(page.waits, [10000, 20000]);
+});
+
+test('if Trello keeps refusing, it gives up after about three minutes with the error', async () => {
+    const { trello, store, page } = loadShared('http://localhost:8000/', Array(10).fill({ status: 429, body: 'API_KEY_LIMIT_EXCEEDED' }));
+    store.trello_tools_api_key = KEY;
+    store.trello_tools_token = 'ABC123';
+    await assert.rejects(trello.fetch('members/me'), /429/);
+    assert.strictEqual(page.requests.length, 7);
+    assert.strictEqual(page.waits.reduce((a, b) => a + b, 0), 150000);
 });
 
 run(tests);

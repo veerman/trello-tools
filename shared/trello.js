@@ -2,7 +2,8 @@
 // and the Connect dialog. Everything runs in the browser, so the pages can be hosted as plain files.
 
 // Whoever hosts these pages can put their Trello API key here so visitors only have to approve.
-// Leave it empty and everyone brings their own key in the Connect dialog.
+// Leave it empty and everyone brings their own key: in the Connect dialog, or from a link with
+// ?api_key=<key> that someone shared with them (the key is saved in their browser).
 const DEFAULT_TRELLO_API_KEY = '';
 const TRELLO_APP_NAME = 'Trello Tools';
 const TOKEN_STORAGE_KEY = 'trello_tools_token';
@@ -18,7 +19,11 @@ const escapeHtml = (text) => String(text ?? '')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+// When Trello answers "too many requests", wait this long and try again, at most this many times
+const RATE_LIMIT_WAITS = [10, 20, 30, 30, 30, 30];
+
 let trelloRequestCount = 0;
+const trelloWait = (seconds) => new Promise(resolve => setTimeout(resolve, seconds * 1000));
 
 const trello = {
     // Called while a page waits out the rate limit, with the pause in seconds
@@ -28,6 +33,20 @@ const trello = {
     // ('' when there is no token or no API key to use it with)
     init() {
         OLD_TOKEN_KEYS.forEach(key => localStorage.removeItem(key));
+        // A shared link with ?api_key=<key> saves that key in this browser, then the key is taken
+        // out of the address so it doesn't end up in bookmarks or screenshots
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('api_key')) {
+            const linkedKey = params.get('api_key').trim();
+            if (this.isValidKey(linkedKey) && linkedKey !== localStorage.getItem(API_KEY_STORAGE_KEY)) {
+                localStorage.setItem(API_KEY_STORAGE_KEY, linkedKey);
+                // A login belongs to the key it was made with
+                localStorage.removeItem(TOKEN_STORAGE_KEY);
+            }
+            params.delete('api_key');
+            const search = params.toString();
+            history.replaceState(null, '', window.location.pathname + (search ? `?${search}` : '') + window.location.hash);
+        }
         const hash = window.location.hash;
         if (hash.startsWith('#token=')) {
             localStorage.setItem(TOKEN_STORAGE_KEY, hash.substring('#token='.length));
@@ -91,12 +110,15 @@ const trello = {
         window.location.reload();
     },
 
-    // Every API call goes through here. Pauses every 80 requests to stay under Trello's rate limit.
+    // Every API call goes through here. Pauses every 80 requests to stay under Trello's rate limit,
+    // and when Trello still answers "too many requests" (others may share the key), waits and sends
+    // the same request again, so a long run like creating a board slows down instead of stopping
+    // half way. Trello refused that request, so sending it again can't create anything twice.
     async fetch(endpoint, options = {}) {
         trelloRequestCount++;
         if (trelloRequestCount % 80 === 0) {
             if (this.onPause) this.onPause(10);
-            await new Promise(resolve => setTimeout(resolve, 10000));
+            await trelloWait(10);
         }
 
         const separator = endpoint.includes('?') ? '&' : '?';
@@ -104,7 +126,13 @@ const trello = {
         const fetchOptions = { ...options };
         if (options.body) fetchOptions.headers = { 'Content-Type': 'application/json', ...options.headers };
 
-        const response = await window.fetch(url, fetchOptions);
+        let response = await window.fetch(url, fetchOptions);
+        for (const seconds of RATE_LIMIT_WAITS) {
+            if (response.status !== 429) break;
+            if (this.onPause) this.onPause(seconds);
+            await trelloWait(seconds);
+            response = await window.fetch(url, fetchOptions);
+        }
         if (!response.ok) {
             const errorText = await response.text();
             // A revoked or expired login: forget it so the page offers Connect again

@@ -33,7 +33,7 @@ To get a key:
 2. On its **API key** page, generate a key.
 3. On the same page, add the address you open the pages from (for example `https://you.github.io` or `http://localhost:8000`) to **Allowed origins**, so Trello can send you back after you approve. If you can't, use "paste a token instead" in the Connect dialog.
 
-Hosting for a team? Put your key in `DEFAULT_TRELLO_API_KEY` at the top of `shared/trello.js`. People then only click Connect and approve, and only your key needs the allowed origin.
+Sharing with a team? Send them a link with your key, like `https://you.github.io/trello-tools/board-editor/?api_key=<your key>`. The page saves the key in their browser and takes it out of the address, so they only click Connect and approve, and only your key needs the allowed origin. Everyone on one key shares Trello's limit for that key (about 300 requests every 10 seconds); viewing and editing use few, creating a board uses one per list, card, and item. When Trello asks to slow down, the pages wait and try again. Heavy users can bring their own key. If you host your own copy, `DEFAULT_TRELLO_API_KEY` at the top of `shared/trello.js` sets a key for every visitor instead.
 
 ### Board backup
 
