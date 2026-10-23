@@ -24,9 +24,11 @@ from file_store import FileStore
 env.load_env()
 HERE = Path(__file__).resolve().parent
 
+# The most comments Trello sends in one request; busier boards are fetched in pages (fetch_board)
+COMMENT_PAGE = 1000
 BOARD_QUERY = ("fields=name,shortUrl,dateLastActivity&organization=true&organization_fields=displayName"
                "&lists=open&cards=open&checklists=all&card_attachments=true"
-               "&actions=commentCard&actions_limit=1000")
+               f"&actions=commentCard&actions_limit={COMMENT_PAGE}")
 
 
 def setting(name: str) -> str:
@@ -57,6 +59,22 @@ def trello_fetch(endpoint):
                 time.sleep(10)
                 continue
             raise RuntimeError(f"API Error {e.code}: {e.read().decode()}")
+
+
+def fetch_board(board_id, fetch=None):
+    """The board with every comment. Trello sends the newest comments first, at most COMMENT_PAGE
+    at a time, so while a page comes back full the next one asks for the comments before its last."""
+    fetch = fetch or trello_fetch
+    board_data = fetch(f"boards/{board_id}?{BOARD_QUERY}")
+    page = board_data.get('actions', [])
+    while len(page) == COMMENT_PAGE:
+        last = page[-1]['id']
+        page = fetch(f"boards/{board_id}/actions?filter=commentCard&limit={COMMENT_PAGE}&before={last}")
+        # Stop if Trello ever sends the same page again, rather than loop
+        if not page or page[-1]['id'] == last:
+            break
+        board_data['actions'].extend(page)
+    return board_data
 
 
 def sanitize_filename(name):
@@ -150,7 +168,7 @@ def main():
     for i, (ws, board) in enumerate(boards, 1):
         print(f"[{i}/{len(boards)}] {ws} / {board['name']}")
         try:
-            board_data = trello_fetch(f"boards/{board['id']}?{BOARD_QUERY}")
+            board_data = fetch_board(board['id'])
             lists_and_cards = board_markdown.open_lists_and_cards(board_data)
             fingerprints = store.record_board(board_data, lists_and_cards)
             write_board_file(backup_dir / 'boards', board_data, board_markdown.board_to_markdown(board_data, fingerprints))

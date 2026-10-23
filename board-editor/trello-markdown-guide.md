@@ -82,7 +82,7 @@ Backups add each downloaded file's fingerprint after its link, like `- [Plan.doc
 
 #### **Descriptions**
 
-Any normal text written directly under a **Heading 3 (Card)** header (separated by a single blank newline) becomes the card description. Write it before the card's checklists and attachments. Use **bold** for sub-headings: a line starting with `#` or `##` inside a description is read as a new board title or a new list. Trello allows at most 16,384 characters per description.
+Any normal text written directly under a **Heading 3 (Card)** header (separated by a single blank newline) becomes the card description. Write it before the card's checklists and attachments. Use **bold** for sub-headings: a line starting with `#` or `##` inside a description is read as a new board title or a new list. Exports turn any heading inside a Trello description into bold for the same reason. Trello allows at most 16,384 characters per description.
 
 #### **Comments**
 

@@ -222,6 +222,29 @@ def test_stored_files_keep_a_sensible_extension():
     assert file_store.extension_for('notes.txt', 'https://example.com/x.pdf') == '.txt'
 
 
+def test_busy_boards_keep_every_comment_by_fetching_older_pages():
+    # 2,500 comments, newest first: Trello sends 1,000 with the board, then pages of older ones
+    comments = [{'id': f'{n:04d}', 'type': 'commentCard'} for n in range(2500, 0, -1)]
+    asked = []
+
+    def fake_fetch(endpoint):
+        asked.append(endpoint)
+        if endpoint.startswith('boards/B1?'):
+            return {'id': 'B1', 'name': 'Busy', 'actions': comments[:1000]}
+        before = endpoint.split('before=')[1]
+        older = [c for c in comments if c['id'] < before]
+        return older[:1000]
+
+    board = backup.fetch_board('B1', fake_fetch)
+    assert [c['id'] for c in board['actions']] == [c['id'] for c in comments]
+    assert len(asked) == 3 and asked[1].endswith('before=1501') and 'limit=1000' in asked[1]
+
+    # A quiet board takes one request, and a page that comes back the same stops the paging
+    assert backup.fetch_board('B1', lambda e: {'id': 'B1', 'actions': comments[:3]})['actions'] == comments[:3]
+    same = backup.fetch_board('B1', lambda e: {'id': 'B1', 'actions': comments[:1000]} if '?' in e and 'before' not in e else comments[:1000])
+    assert len(same['actions']) == 1000
+
+
 def test_env_file_is_read_without_overriding_the_environment():
     with tempfile.TemporaryDirectory() as tmp:
         env_file = Path(tmp) / '.env'
