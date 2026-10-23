@@ -21,7 +21,7 @@ Help menu:
 - Updates Guide: opens updates-guide.html, the step-by-step process for updating a board.
 - Modify Board Prompt: shows prompt_modify.txt with the Markdown guide filled in, ready to copy into an AI tool along with a chunk of the board and a list of changes.
 - Query Board Prompt: same, with prompt_query.txt, for asking questions about a board without changing it.
-- Compare Markdown: links to external diff sites for checking the old file against the new one.
+- Compare Markdown: "Side by side" opens the Compare page (../compare/) with the original on the left and the editor's text on the right; the board check has the same button. Links to external diff sites follow.
 
 The editor fetches trello-markdown-guide.md, prompt_modify.txt, and prompt_query.txt from its own folder, so keep them next to index.html.
 

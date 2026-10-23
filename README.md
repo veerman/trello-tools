@@ -7,6 +7,7 @@ Planned work and current limits are listed in KNOWN-ISSUES.md.
 ## Tools
 
 - **board-editor/**: a browser app. Loads a Trello board as Markdown, lets you edit it (Markdown or WYSIWYG), saves to file, and creates a new board from the Markdown. Checks the board before saving and shows what changed since the original. Also holds the Markdown guide, two AI prompts (modify a board, query a board), and the updates guide.
+- **compare/**: a browser page that puts two Markdown files side by side, full screen, and marks what differs line by line and word by word. Can ignore trailing or leading spaces, extra spaces, blank lines, and case. The editor's "Side by side" opens it with the original and the edited board.
 - **board-backup/**: a Python script for version control. Saves each board as one Markdown file for a private git repo, and stores each attachment once, named by its fingerprint, with an index of where every file is used. Includes a page for choosing which boards to keep, the Attachment Manager for browsing the index, and a safe copy of the files to Google Drive.
 - **member-tools/**: a browser page for workspace membership: see each workspace's members, remove people, see which workspaces a person is in, and add one person to many workspaces in one run.
 - **file-links/**: a redirect page plus a small Google Apps Script: links like `?f=project-plan` that always open the current version of a file, looked up by name in a private Google Sheet.
@@ -23,7 +24,7 @@ Each file in tests/ runs on its own: `node tests/<name>.test.js` for the pages a
 
 ### Board editor and member manager
 
-Plain web pages with no server code. Put the `board-editor`, `member-tools`, and `shared` folders on any static host (GitHub Pages, Netlify, any web server) and open `board-editor/` or `member-tools/`. To run them on your own computer instead, run `python -m http.server 8000` in the repo folder and open http://localhost:8000/board-editor/.
+Plain web pages with no server code. Put the `board-editor`, `compare`, `member-tools`, and `shared` folders on any static host (GitHub Pages, Netlify, any web server) and open `board-editor/` or `member-tools/`. To run them on your own computer instead, run `python -m http.server 8000` in the repo folder and open http://localhost:8000/board-editor/.
 
 Each person brings their own Trello API key. Click **Connect to Trello**, paste the key, and approve on Trello. The key and the login are kept only in that browser, both pages share them, and Disconnect cancels the login at Trello.
 

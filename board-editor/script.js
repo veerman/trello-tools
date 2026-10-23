@@ -1414,6 +1414,23 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => copyCheckBtn.innerHTML = originalHtml, 2000);
     });
 
+    // Side by side: the Compare page opens with the original on the left and the editor's text on the right.
+    // It reads this once and removes it (compare/compare.js).
+    const COMPARE_HANDOFF_KEY = 'trello_tools_compare_handoff';
+    document.querySelectorAll('[data-open-compare]').forEach(btn => btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const handoff = {
+            left: { label: originalLabel ? `Original: ${originalLabel}` : 'Original', text: originalMarkdown || '' },
+            right: { label: 'Editor', text: editorAdapter.getMarkdown() }
+        };
+        try {
+            localStorage.setItem(COMPARE_HANDOFF_KEY, JSON.stringify(handoff));
+        } catch (err) {
+            showStatus("the board is too big to hand over. save both versions to files and open them in Compare.", true);
+        }
+        window.open('../compare/', '_blank', 'noopener');
+    }));
+
     const init = async () => {
         if (trelloToken) {
             trelloConnectContainer.classList.add('hidden');

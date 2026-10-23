@@ -51,6 +51,9 @@
                             </div>
                             <div class="absolute right-full top-0 pr-1 hidden group-hover/compare:block w-48 z-50">
                                 <div class="bg-gray-800 border border-gray-700 rounded shadow-xl py-1">
+                                    <a href="../compare/" data-open-compare class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50" title="The original on the left, the editor on the right">
+                                        <i class="fa-solid fa-table-columns text-blue-400 w-4 text-center"></i> Side by side
+                                    </a>
                                     <a href="https://editor.mergely.com/" target="_blank" class="block px-4 py-2.5 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center gap-2 border-b border-gray-700/50">
                                         <i class="fa-solid fa-code-merge text-blue-400 w-4 text-center"></i> Mergely
                                     </a>
@@ -223,6 +226,9 @@
                 <p class="text-xs text-gray-500">Tip: copy the report and paste it into your AI tool along with the board Markdown to have it fix the problems.</p>
             </div>
             <div class="p-4 border-t border-gray-700 bg-gray-900 flex justify-end gap-2">
+                <button data-open-compare class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium rounded transition-colors flex items-center gap-2 shadow-sm" title="The original on the left, the editor on the right">
+                    <i class="fa-solid fa-table-columns"></i> Side by side
+                </button>
                 <button id="copy-check-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium rounded transition-colors flex items-center gap-2 shadow-sm">
                     <i class="fa-regular fa-copy"></i> Copy report
                 </button>
